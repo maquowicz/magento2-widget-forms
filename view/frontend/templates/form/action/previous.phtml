@@ -1,0 +1,16 @@
+<?php
+/**
+ * Copyright © Alekseon sp. z o.o.
+ * http://www.alekseon.com/
+ */
+
+/**
+ * @var $block \Alekseon\WidgetForms\Block\Form\Action
+ * @var $escaper \Magento\Framework\Escaper
+ */
+?>
+<div class="primary">
+    <button type="button" title="<?= $escaper->escapeHtmlAttr($block->getPreviousButtonLabel()) ?>" class="action previous primary">
+        <span><?= $block->escapeHtml($block->getPreviousButtonLabel()) ?></span>
+    </button>
+</div>

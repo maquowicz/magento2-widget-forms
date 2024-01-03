@@ -23,7 +23,19 @@
     <?= $block->getChildHtml() ?>
 </fieldset>
 <div class="actions-toolbar"
-     id="form-tab-actions-<?= $escaper->escapeHtmlAttr($block->getTab()->getTabSequenceNumber()) ?>"
-     <?php if (!$block->getTab()->getIsFirstTab()): ?>style="display: none"<?php endif ?>>
-    <?= $block->getSubmitButtonHtml() ?>
+     id="form-tab-actions-<?= $escaper->escapeHtmlAttr($block->getTab()->getTabSequenceNumber()) ?>">
+    <?php if (!$block->getTab()->getIsFirstTab()) : ?>
+        <div class="action-previous">
+            <?= $block->getPreviousButtonHtml(); ?>
+        </div>
+    <?php endif; ?>
+    <?php if ($block->getTab()->getIsLastTab()) : ?>
+        <div class="action-submit">
+            <?= $block->getSubmitButtonHtml(); ?>
+        </div>
+    <?php else : ?>
+        <div class="action-next">
+            <?= $block->getNextButtonHtml(); ?>
+        </div>
+    <?php endif; ?>
 </div>

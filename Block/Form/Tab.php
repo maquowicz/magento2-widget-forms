@@ -21,32 +21,56 @@ class Tab extends \Magento\Framework\View\Element\Template
 {
     protected $_template = "Alekseon_WidgetForms::form/tab.phtml";
 
-    /**
-     * @return string
-     * @throws \Magento\Framework\Exception\LocalizedException
-     */
     public function getSubmitButtonHtml()
     {
         return $this->getLayout()->createBlock(
-            \Alekseon\WidgetForms\Block\Form\Action::class,
-            'form_' . $this->getForm()->getId() . '_action_' . $this->getTab()->getId(),
+            \Alekseon\WidgetForms\Block\Form\Action\Submit::class,
+            'form_' . $this->getForm()->getId() . '_action_submit_' . $this->getTab()->getId(),
             [
                 'data' => [
-                    'submit_button_label' => $this->getSubmitButtonLabel()
+                    'button_label' => $this->getSubmitButtonLabel()
                 ],
             ]
         )->toHtml();
     }
 
     /**
+     * @return string
+     * @throws \Magento\Framework\Exception\LocalizedException
+     */
+    public function getNextButtonHtml()
+    {
+        return $this->getLayout()->createBlock(
+            \Alekseon\WidgetForms\Block\Form\Action\Next::class,
+            'form_' . $this->getForm()->getId() . '_action_next_' . $this->getTab()->getId(),
+            [
+                'data' => [
+                    'button_label' => $this->getNextButtonLabel()
+                ],
+            ]
+        )->toHtml();
+    }
+
+    public function getPreviousButtonHtml()
+    {
+        return $this->getLayout()->createBlock(
+            \Alekseon\WidgetForms\Block\Form\Action\Previous::class,
+            'form_' . $this->getForm()->getId() . '_action_previous_' . $this->getTab()->getId(),
+            [
+                'data' => [
+                    'button_label' => $this->getPreviousButtonLabel()
+                ],
+            ]
+        )->toHtml();
+    }
+
+
+
+    /**
      * @return \Magento\Framework\Phrase
      */
-    private function getSubmitButtonLabel()
+    public function getSubmitButtonLabel()
     {
-        if (!$this->getTab()->getIsLastTab()) {
-            return __('Next');
-        }
-
         $form = $this->getForm();
         if ($form && $form->getSubmitButtonLabel()) {
             return $form->getSubmitButtonLabel();
@@ -54,4 +78,15 @@ class Tab extends \Magento\Framework\View\Element\Template
 
         return __('Submit');
     }
+
+    public function getNextButtonLabel()
+    {
+        return __('Next');
+    }
+
+    public function getPreviousButtonLabel()
+    {
+        return __('Previous');
+    }
+
 }
