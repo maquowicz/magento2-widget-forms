@@ -28,7 +28,9 @@ class Tab extends \Magento\Framework\View\Element\Template
             'form_' . $this->getForm()->getId() . '_action_submit_' . $this->getTab()->getId(),
             [
                 'data' => [
-                    'button_label' => $this->getSubmitButtonLabel()
+                    'button_label' => $this->getSubmitButtonLabel(),
+                    'form_id' => 'alekseon-widget-form-' . $this->getForm()->getId(),
+                    'tab_id' => $this->getTab()->getTabSequenceNumber()
                 ],
             ]
         )->toHtml();
@@ -45,7 +47,9 @@ class Tab extends \Magento\Framework\View\Element\Template
             'form_' . $this->getForm()->getId() . '_action_next_' . $this->getTab()->getId(),
             [
                 'data' => [
-                    'button_label' => $this->getNextButtonLabel()
+                    'button_label' => $this->getNextButtonLabel(),
+                    'form_id' => 'alekseon-widget-form-' . $this->getForm()->getId(),
+                    'tab_id' => $this->getTab()->getTabSequenceNumber()
                 ],
             ]
         )->toHtml();
@@ -58,7 +62,9 @@ class Tab extends \Magento\Framework\View\Element\Template
             'form_' . $this->getForm()->getId() . '_action_previous_' . $this->getTab()->getId(),
             [
                 'data' => [
-                    'button_label' => $this->getPreviousButtonLabel()
+                    'button_label' => $this->getPreviousButtonLabel(),
+                    'form_id' => 'alekseon-widget-form-' . $this->getForm()->getId(),
+                    'tab_id' => $this->getTab()->getTabSequenceNumber()
                 ],
             ]
         )->toHtml();

@@ -5,12 +5,12 @@
  */
 
 /**
- * @var $block \Alekseon\WidgetForms\Block\Form\Action
+ * @var $block \Alekseon\WidgetForms\Block\Form\Action\Next
  * @var $escaper \Magento\Framework\Escaper
  */
 ?>
 <div class="primary">
-    <button type="button" title="<?= $escaper->escapeHtmlAttr($block->getNextButtonLabel()) ?>" class="action next primary">
-        <span><?= $block->escapeHtml($block->getNextButtonLabel()) ?></span>
+    <button type="button" title="<?= $escaper->escapeHtmlAttr($block->getButtonLabel()) ?>" class="action next primary">
+        <span><?= $block->escapeHtml($block->getButtonLabel()) ?></span>
     </button>
 </div>

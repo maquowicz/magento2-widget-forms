@@ -5,12 +5,12 @@
  */
 
 /**
- * @var $block \Alekseon\WidgetForms\Block\Form\Action
+ * @var $block \Alekseon\WidgetForms\Block\Form\Action\Submit
  * @var $escaper \Magento\Framework\Escaper
  */
 ?>
 <div class="primary">
-    <button type="submit" title="<?= $escaper->escapeHtmlAttr($block->getSubmitButtonLabel()) ?>" class="action submit primary">
-        <span><?= $block->escapeHtml($block->getSubmitButtonLabel()) ?></span>
+    <button type="submit" title="<?= $escaper->escapeHtmlAttr($block->getButtonLabel()) ?>" class="action submit primary">
+        <span><?= $block->escapeHtml($block->getButtonLabel()) ?></span>
     </button>
 </div>

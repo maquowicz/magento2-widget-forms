@@ -5,12 +5,12 @@
  */
 
 /**
- * @var $block \Alekseon\WidgetForms\Block\Form\Action
+ * @var $block \Alekseon\WidgetForms\Block\Form\Action\Previous
  * @var $escaper \Magento\Framework\Escaper
  */
 ?>
 <div class="primary">
-    <button type="button" title="<?= $escaper->escapeHtmlAttr($block->getPreviousButtonLabel()) ?>" class="action previous primary">
-        <span><?= $block->escapeHtml($block->getPreviousButtonLabel()) ?></span>
+    <button type="button" title="<?= $escaper->escapeHtmlAttr($block->getButtonLabel()) ?>" class="action previous primary">
+        <span><?= $block->escapeHtml($block->getButtonLabel()) ?></span>
     </button>
 </div>

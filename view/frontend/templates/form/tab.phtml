@@ -23,7 +23,7 @@
     <?= $block->getChildHtml() ?>
 </fieldset>
 <div class="actions-toolbar"
-     id="form-tab-actions-<?= $escaper->escapeHtmlAttr($block->getTab()->getTabSequenceNumber()) ?>">
+     id="form-tab-actions-<?= $escaper->escapeHtmlAttr($block->getTab()->getTabSequenceNumber()) ?>"<?= $block->getTab()->getIsFirstTab() ? '' : 'style="display: none;"' ?>>
     <?php if (!$block->getTab()->getIsFirstTab()) : ?>
         <div class="action-previous">
             <?= $block->getPreviousButtonHtml(); ?>

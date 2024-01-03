@@ -29,13 +29,13 @@ define([
 
         openTab: function (form, tabIndex) {
             $(this.options.form).find('#form-tab-fieldset-' + this.options.currentTab).slideUp();
-            $(this.options.form).find('#form-tab-actions-' + this.options.currentTab).hide();
+            //$(this.options.form).find('#form-tab-actions-' + this.options.currentTab).hide();
 
             setTimeout(() => {
                 this.options.currentTab = tabIndex;
 
                 $(this.options.form).find('#form-tab-fieldset-' + this.options.currentTab).slideDown();
-                $(this.options.form).find('#form-tab-actions-' + this.options.currentTab).show();
+                //$(this.options.form).find('#form-tab-actions-' + this.options.currentTab).show();
             }, "100");
         },
 
