@@ -10,7 +10,17 @@
  */
 ?>
 <div class="primary">
-    <button type="submit" title="<?= $escaper->escapeHtmlAttr($block->getButtonLabel()) ?>" class="action submit primary">
+    <button id="action-submit-<?= $block->getTabId(); ?>" type="submit" title="<?= $escaper->escapeHtmlAttr($block->getButtonLabel()) ?>" class="action submit primary">
         <span><?= $block->escapeHtml($block->getButtonLabel()) ?></span>
     </button>
+    <script type="text/javascript">
+        (function() {
+            let action = document.querySelector('#<?= $block->getFormId() ?> #action-submit-<?= $block->getTabId() ?>');
+            action.addEventListener('click', (ev) => {
+                ev.preventDefault();
+                let form = document.querySelector('#<?= $block->getFormId() ?>');
+                form.dispatchEvent(new CustomEvent('form-action', {detail : {action_type: 'submit', tab_id: '<?= $block->getTabId(); ?>'}}));
+            });
+        })();
+    </script>
 </div>

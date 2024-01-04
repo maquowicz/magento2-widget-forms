@@ -23,7 +23,9 @@
     <?= $block->getChildHtml() ?>
 </fieldset>
 <div class="actions-toolbar"
-     id="form-tab-actions-<?= $escaper->escapeHtmlAttr($block->getTab()->getTabSequenceNumber()) ?>"<?= $block->getTab()->getIsFirstTab() ? '' : 'style="display: none;"' ?>>
+     id="form-tab-actions-<?= $escaper->escapeHtmlAttr($block->getTab()->getTabSequenceNumber()) ?>"
+    <?= $block->getTab()->getIsFirstTab() ? '' : ' style="display: none;"' ?>>
+    <div class="form-tab-actions-inner">
     <?php if (!$block->getTab()->getIsFirstTab()) : ?>
         <div class="action-previous">
             <?= $block->getPreviousButtonHtml(); ?>
@@ -38,4 +40,5 @@
             <?= $block->getNextButtonHtml(); ?>
         </div>
     <?php endif; ?>
+    </div>
 </div>

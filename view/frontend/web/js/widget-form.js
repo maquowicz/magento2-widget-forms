@@ -21,21 +21,36 @@ define([
         _create: function () {
             let self = this;
             this.options.form = $('#' + this.options.formId)[0];
-            $(this.options.form).submit(function (event) {
-                self.submitFormAction();
-                event.preventDefault(event);
+
+            $(this.options.form).on('form-action', (ev) => {
+                ev.stopPropagation();
+
+                switch (ev.detail.action_type) {
+                    case 'next' :
+                        if ($(this.options.form).validation && !$(this.options.form).validation('isValid')) {
+                            break;
+                        }
+                        this.openTab(this.options.form, parseInt(ev.detail.tab_id, 10) + 1);
+                        break;
+                    case 'previous' :
+                        this.openTab(this.options.form, parseInt(ev.detail.tab_id, 10) - 1);
+                        break;
+                    case 'submit' :
+                        this.submitFormAction();
+                        break;
+                }
             });
         },
 
         openTab: function (form, tabIndex) {
             $(this.options.form).find('#form-tab-fieldset-' + this.options.currentTab).slideUp();
-            //$(this.options.form).find('#form-tab-actions-' + this.options.currentTab).hide();
+            $(this.options.form).find('#form-tab-actions-' + this.options.currentTab).hide();
 
             setTimeout(() => {
                 this.options.currentTab = tabIndex;
 
                 $(this.options.form).find('#form-tab-fieldset-' + this.options.currentTab).slideDown();
-                //$(this.options.form).find('#form-tab-actions-' + this.options.currentTab).show();
+                $(this.options.form).find('#form-tab-actions-' + this.options.currentTab).show();
             }, "100");
         },
 

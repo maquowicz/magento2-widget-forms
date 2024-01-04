@@ -10,7 +10,18 @@
  */
 ?>
 <div class="primary">
-    <button type="button" title="<?= $escaper->escapeHtmlAttr($block->getButtonLabel()) ?>" class="action next primary">
+    <button id="action-next-<?= $block->getTabId(); ?>" type="button" title="<?= $escaper->escapeHtmlAttr($block->getButtonLabel()) ?>" class="action next primary">
         <span><?= $block->escapeHtml($block->getButtonLabel()) ?></span>
     </button>
+    <script type="text/javascript">
+        (function () {
+            let action = document.querySelector('#<?= $block->getFormId() ?> #action-next-<?= $block->getTabId() ?>');
+            action.addEventListener('click', (ev) => {
+                ev.preventDefault();
+                let form = document.querySelector('#<?= $block->getFormId() ?>');
+                form.dispatchEvent(new CustomEvent('form-action', {detail : {action_type: 'next', tab_id: '<?= $block->getTabId(); ?>'}}));
+            });
+        })();
+
+    </script>
 </div>

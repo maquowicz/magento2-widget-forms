@@ -1,3 +1,46 @@
+& when (@media-common = true) {
+    .alekseon-widget-form-wrapper {
+
+        .field {
+            padding-bottom: 1.2rem;
+        }
+
+        .actions-toolbar {
+
+            .form-tab-actions-inner {
+                display: flex;
+                justify-content: end;
+                gap: 10px;
+                padding-top: 10px;
+            }
+
+            button.primary {
+                cursor: pointer;
+                border-radius: 3px;
+                outline-offset: 1px;
+                text-decoration: none;
+                box-shadow: none;
+                border: 1px solid transparent;
+                color: #fff;
+                background-color: #6aa41f;
+                display: inline-block;
+                font-size: 1.4rem;
+                font-weight: 700;
+                text-align: center;
+                position: relative;
+                line-height: 1.275em;
+                margin: 0;
+                text-transform: none;
+                padding: 0.75em 1em;
+                box-sizing: border-box;
+                transition: background-color 0.5s, border-color 0.5s, fill 0.5s, color 0.5s;
+                vertical-align: middle;
+                z-index: 5;
+                min-width: 12rem;
+            }
+        }
+    }
+}
 
 .media-width(@extremum, @break) when (@extremum = 'min') and (@break = @screen__m) {
   .control.multi-columns {
@@ -7,3 +50,5 @@
     column-gap: 10px;
   }
 }
+
+
