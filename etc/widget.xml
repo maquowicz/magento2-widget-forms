@@ -14,6 +14,19 @@
             <parameter name="form_id" xsi:type="select" visible="true" source_model="Alekseon\WidgetForms\Model\Config\Source\AvailableForms">
                 <label translate="true">Select Form</label>
             </parameter>
+
+            <parameter name="form_mode" xsi:type="select"  visible="true">
+                <label translate="true">Form Mode</label>
+                <options>
+                    <option name="new" value="new" selected="true">
+                        <label translate="true">New</label>
+                    </option>
+                    <option name="edit" value="edit">
+                        <label translate="true">Edit</label>
+                    </option>
+                </options>
+            </parameter>
+
             <parameter name="hide_title" xsi:type="select" visible="true"
                        source_model="Magento\Config\Model\Config\Source\Yesno">
                 <label translate="true">Hide Form Title</label>

@@ -17,12 +17,32 @@ define([
             tabs: [],
             form: null,
             formSubmitUrl: 'formSubmitUrl',
-            formId: ''
+            formId: '',
+            widgetConfig : {},
         },
 
         cookieStorage : {},
 
         _create: function () {
+            const wconf = this.options.widgetConfig;
+
+            let url = wconf.load_form_data_url;
+            let json = this.getCurrentUrlParams();
+            json = JSON.stringify(json);
+
+            let formData = new FormData();
+            formData.append('form_mode', wconf.form_mode);
+            formData.append('form_id', wconf.backend_form_id);
+            formData.append('form_key', $.cookie('form_key'));
+            formData.append('form_params', json);
+
+            let result = fetch (url, {
+                method: 'POST',
+                body : formData
+            }).then((response) => {
+                console.log(response);
+            });
+
             this.options.form = document.getElementById(this.options.formId);
 
             let formCookieData = this.getFormCookieData(this.options.formId);
@@ -187,6 +207,61 @@ define([
             this.cookieStorage[ev.target.id] = result.join(',');
             this.setFormCookie(this.options.formId);
             return this;
+        },
+
+        getCurrentUrlParams : function () {
+            let o = window.location.origin, h = window.location.href;
+            let params = {};
+
+            if (h.length > o.length) {
+                let i = 0;
+                while (o.charAt(i) === h.charAt(i)) i++;
+                let result = h.substring(i);
+
+                if ('/' === result.charAt(0)) {
+                    result = result.substring(1);
+                }
+                let split = result.split('#')[0];
+                split = split.split('?');
+
+                if (split[0].length) {
+                    if ('/' === split[0].charAt(split[0].length - 1)) {
+                        split[0] = split[0].substring(0, split[0].length - 1);
+                    }
+
+                    let m2 = split[0].split('/');
+                    if (m2.length > 3) {
+                        for (let i = 3; i < m2.length; i+2) {
+                            if (m2[0].length) {
+                                if (m2.length > i+2 && m2[1].length) {
+                                    params[decodeURIComponent(m2[i])] = decodeURIComponent(m2[i+1]);
+                                } else {
+                                    params[decodeURIComponent(m2[i])] = null;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                if (split.length > 1) {
+                    let q = split[1];
+                    let args = q.split('&');
+                    for (let i = 0; i < args.length; i++) {
+                        if (args[i].length) {
+                            let pair = args[i].split('=');
+                            if (pair[0].length) {
+                                if (2 === pair.length && pair[1].length) {
+                                    params[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1]);
+                                } else {
+                                    params[decodeURIComponent(pair[0])] = null;
+                                }
+                            }
+                        }
+
+                    }
+                }
+            }
+            return params;
         },
 
         openTab: function (form, tabIndex) {

@@ -30,6 +30,7 @@ class WidgetForm extends \Magento\Framework\View\Element\Template
      * @var string
      */
     protected $_template = 'Alekseon_WidgetForms::widget_form.phtml';
+
     /**
      * @var FormRepository
      */
@@ -327,5 +328,21 @@ class WidgetForm extends \Magento\Framework\View\Element\Template
         return $this->getForm()->getIdentifier()
             ? 'alekseon-widget-' . $this->getForm()->getIdentifier() . '-form--wrapper'
             : '';
+    }
+
+
+    public function getWidgetConfigJson () : string
+    {
+        $data = [];
+
+        $data['backend_form_id'] = (int) $this->getForm()->getId();
+        $data['form_mode'] = $this->getData('form_mode');
+
+        $data['load_form_data_url'] = $this->_urlBuilder->getUrl(
+            'Alekseon_WidgetForms/form/load',
+            ['_secure' => true]
+        );
+
+        return json_encode($data);
     }
 }

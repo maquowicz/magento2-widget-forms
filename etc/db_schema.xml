@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Copyright © Magento, Inc. All rights reserved.
+ * See COPYING.txt for license details.
+ */
+-->
+<schema xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:Setup/Declaration/Schema/etc/schema.xsd">
+
+    <table name="alekseon_custom_form_record">
+        <column xsi:type="int" name="customer_id" unsigned="true" nullable="true" identity="false"
+                comment="Customer ID"/>
+
+        <column xsi:type="int" name="order_id" unsigned="true" nullable="true" identity="false"
+                comment="Order ID"/>
+
+        <column xsi:type="int" name="order_item_id" unsigned="true" nullable="true" identity="false"
+                comment="Order Item ID"/>
+
+        <constraint xsi:type="foreign" referenceId="ALEKSEON_CUSTOM_FORM_RECORD_FK_CUSTOMER_ID" table="alekseon_custom_form_record"
+                    column="customer_id" referenceTable="customer_entity" referenceColumn="entity_id" onDelete="CASCADE"/>
+
+        <constraint xsi:type="foreign" referenceId="ALEKSEON_CUSTOM_FORM_RECORD_FK_ORDER_ID" table="alekseon_custom_form_record"
+                    column="order_id" referenceTable="sales_order" referenceColumn="entity_id" onDelete="CASCADE"/>
+
+        <constraint xsi:type="foreign" referenceId="ALEKSEON_CUSTOM_FORM_RECORD_FK_ORDER_ITEM_ID" table="alekseon_custom_form_record"
+                    column="order_item_id" referenceTable="sales_order_item" referenceColumn="item_id" onDelete="CASCADE"/>
+
+
+        <index referenceId="ALEKSEON_CUSTOM_FORM_RECORD_IDX_CUSTOMER_ID" indexType="btree">
+            <column name="customer_id"/>
+        </index>
+        <index referenceId="ALEKSEON_CUSTOM_FORM_RECORD_IDX_ORDER_ID" indexType="btree">
+            <column name="order_id"/>
+        </index>
+    </table>
+
+</schema>
