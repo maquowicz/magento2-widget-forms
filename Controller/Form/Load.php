@@ -111,7 +111,7 @@ class Load implements \Magento\Framework\App\Action\HttpPostActionInterface
 
             if (!($formMode = $this->request->getParam('form_mode')) || !in_array($formMode, ['new', 'edit'])) {
                 $result['missing_params'][] = 'form_mode';
-                throw new LocalizedException(__());
+                throw new LocalizedException(__('Missing parameter.'));
             }
 
 
@@ -122,7 +122,7 @@ class Load implements \Magento\Framework\App\Action\HttpPostActionInterface
 
             if (!($formId = $this->request->getParam('form_id'))) {
                 $result['missing_params'][] = 'form_id';
-                throw new LocalizedException(__());
+                throw new LocalizedException(__('Missing parameter.'));
             }
 
             $supplied = json_decode($this->request->getParam('form_params'), true);
@@ -130,7 +130,7 @@ class Load implements \Magento\Framework\App\Action\HttpPostActionInterface
             $recordId = array_key_exists('record_id', $supplied) ? $supplied['record_id'] : null;
             if ('edit' === $formMode && !is_numeric($recordId)) {
                 $result['missing_params'][] = 'record_id';
-                throw new LocalizedException(__());
+                throw new LocalizedException(__('Missing parameter.'));
             }
 
             try {
@@ -153,8 +153,11 @@ class Load implements \Magento\Framework\App\Action\HttpPostActionInterface
             if (in_array('order_id', $required) ) {
                 if (!$result['is_logged_in']) {
                     $result['guest_submit_invalidated'] = true;
+                    $result['messages'][] = 'Please log in.';
                     $valid = false;
                 } else if (!array_key_exists('order_id', $supplied) || !is_numeric($supplied['order_id'])) {
+                    $result['messages'][] = 'Missing parameter.';
+
                     $result['missing_params'][] = 'order_id';
                     $valid = false;
                 }
@@ -163,8 +166,10 @@ class Load implements \Magento\Framework\App\Action\HttpPostActionInterface
             if (in_array('order_item_id', $required)) {
                 if (!$result['is_logged_in']) {
                     $result['guest_submit_invalidated'] = true;
+                    $result['messages'][] = 'Please log in.';
                     $valid = false;
                 } else if (!array_key_exists('order_item_id', $supplied) || !is_numeric($supplied['order_item_id'])) {
+                    $result['messages'][] = 'Missing parameter';
                     $result['missing_params'][] = 'order_item_id';
                     $valid = false;
                 }
@@ -179,6 +184,7 @@ class Load implements \Magento\Framework\App\Action\HttpPostActionInterface
                         ->addFieldToFilter('item_id', ['eq' => $supplied['order_item_id']]);
 
                     if (!$orderItemCollection->getSize()) {
+                        $result['messages'][] = 'Cannot locate order_item';
                         $valid = false;
                     } else {
                         /** @var \Magento\Sales\Model\Order\Item $orderItem */
@@ -186,14 +192,17 @@ class Load implements \Magento\Framework\App\Action\HttpPostActionInterface
                         $order = $orderItem->getOrder();
 
                         if  (!$order || !is_numeric($order->getId())) {
+                            $result['messages'][] = 'Cannot locate order';
                             $valid = false;
                         }
 
                         if (in_array('order_id', $required) && (int)$supplied['order_id'] !== (int)$order->getId()) {
+                            $result['messages'][] = 'Order/Item mismatch';
                             $valid = false;
                         }
 
                         if ((int)$this->customerSession->getCustomerId() !== (int) $order->getCustomerId()) {
+                            $result['messages'][] = 'Access to object denied (order)';
                             $valid = false;
                         }
 
@@ -205,10 +214,12 @@ class Load implements \Magento\Framework\App\Action\HttpPostActionInterface
                         ->addFieldToFilter('customer_id', ['eq' => $this->customerSession->getCustomerId()]);
 
                     if (!$orderCollection->getSize()) {
+                        $result['messages'][] = 'Cannot locate order.';
                         $valid = false;
                     } else {
                         $order = $orderCollection->getFirstItem();
                         if ((int) $this->customerSession->getCustomerId() !== (int) $order->getCustomerId()) {
+                            $result['messages'][] = 'Access to object denied (order)';
                             $valid = false;
                         }
                     }
@@ -218,26 +229,30 @@ class Load implements \Magento\Framework\App\Action\HttpPostActionInterface
             if ($valid && 'edit' === $formMode) {
                 try {
                     $formData = $form->getRecordById($recordId);
-                    if ((int)$this->customerSession->getCustomerId() !== (int) $formData->getData('customer_id')) {
-                        $valid = false;
-                    }
-                    if ($order && (int)$order->getId() !== (int)$formData->getData('order_id')) {
-                        $valid = false;
-                    }
-                    if ($orderItem && (int)$orderItem->getId() !== (int) $formData->getData('order_item_id')) {
-                        $valid = false;
-                    }
-
-                    if ($valid) {
-                        $filtered = array_filter($formData->getData(), function ($key) {
-                            return str_starts_with($key, 'field_');
-                        }, ARRAY_FILTER_USE_KEY);
-
-                        $result['data'] = $filtered;
-                    }
                 } catch (\Throwable $e) {
-
+                    $result['messages'][] = 'Cannot locate object (record)';
                 }
+                if ((int)$this->customerSession->getCustomerId() !== (int) $formData->getData('customer_id')) {
+                    $result['messages'][] = 'Access to object denied (record)';
+                    $valid = false;
+                }
+                if ($order && (int)$order->getId() !== (int)$formData->getData('order_id')) {
+                    $result['messages'][] = 'Order/Record mismatch';
+                    $valid = false;
+                }
+                if ($orderItem && (int)$orderItem->getId() !== (int) $formData->getData('order_item_id')) {
+                    $result['messages'][] = 'Item/Record mismatch';
+                    $valid = false;
+                }
+
+                if ($valid) {
+                    $filtered = array_filter($formData->getData(), function ($key) {
+                        return str_starts_with($key, 'field_');
+                    }, ARRAY_FILTER_USE_KEY);
+
+                    $result['data'] = $filtered;
+                }
+
             }
 
 
@@ -257,10 +272,6 @@ class Load implements \Magento\Framework\App\Action\HttpPostActionInterface
         $resultJson->setData($result);
 
         return $resultJson;
-
-    }
-
-    public function matchParams ($required, $supplied) {
 
     }
 }

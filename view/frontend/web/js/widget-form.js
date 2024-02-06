@@ -63,11 +63,11 @@ define([
             const wconf = this.options.widgetConfig;
 
             let url = wconf.load_form_data_url;
-            let json = this.getCurrentUrlParams();
+            let params = this.getCurrentUrlParams();
             json = JSON.stringify(json);
 
             let formData = new FormData();
-            formData.append('form_mode', wconf.form_mode);
+            formData.append('form_mode', wconf.form_mode || 'new');
             formData.append('form_id', wconf.backend_form_id);
             formData.append('form_key', $.cookie('form_key'));
             formData.append('form_params', json);

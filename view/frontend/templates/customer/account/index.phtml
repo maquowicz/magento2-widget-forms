@@ -1,0 +1,36 @@
+<?php
+    /** @var \Magento\Framework\View\Element\Template $block */
+
+    /** @var \Alekseon\WidgetForms\Helper\Data $dataHelper */
+    $dataHelper = $block->getData('data_helper');
+    $_items = $dataHelper->getCustomerRecords();
+?>
+
+<?php if (count($_items)) : ?>
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Title</th>
+                <th>Order ID</th>
+                <th>Item</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+    <?php $i = 1; ?>
+    <?php foreach($_items as $item) : ?>
+        <tr>
+            <td><?= $i . '.' ?></td>
+            <td style="font-weight: bold; color: #0f5293;"><?= $item['form_title'] ?></td>
+            <td><?= null !== $item['order_id'] ? $item['order_id'] : '----' ?></td>
+            <td><?= null !== $item['order_item_id'] ? $item['order_item_id'] : '----' ?></td>
+            <td>
+                <a href="<?= $dataHelper->getEditUrl($item); ?>" target="_blank">Edit</a>
+            </td>
+        </tr>
+    <?php $i++; ?>
+    <?php endforeach; ?>
+    </table>
+<?php else : ?>
+    No records found
+<?php endif; ?>
