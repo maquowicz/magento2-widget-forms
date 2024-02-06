@@ -81,7 +81,7 @@ class AdditionalWidgetFormsAttributesPatch implements DataPatchInterface, PatchR
                 'sort_order' => 1,
                 'group_code' => 'widget_form_attribute',
                 'scope' => Scopes::SCOPE_GLOBAL,
-                'note' => 'Should guest form submit be allowed. Set to \'yes\' only in exceptional cases, such as some anonymous survey'
+                'note' => 'It\'s highly recommended to set it to false. Guest forms are not allowed in edit mode.'
             ]
         );
 
@@ -97,8 +97,7 @@ class AdditionalWidgetFormsAttributesPatch implements DataPatchInterface, PatchR
                 'sort_order' => 2,
                 'group_code' => 'widget_form_attribute',
                 'scope' => Scopes::SCOPE_GLOBAL,
-                'note' => ('Required params to be sent to form submit or load controller. Warning, params such as order_id or order_item_id ' .
-                           'presume that customer must be logged in. Also')
+                'note' => 'Required params to be sent to form submit or load controller. Params like order_id or order_item_id presume that customer would be logged in'
             ]
         );
     }

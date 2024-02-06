@@ -24,6 +24,42 @@ define([
         cookieStorage : {},
 
         _create: function () {
+
+            this.options.form = document.getElementById(this.options.formId);
+            this.loadForm().then((data) => {
+                if ('new' === this.options.widgetConfig.form_mode) {
+                    let formCookieData = this.getFormCookieData(this.options.formId);
+                    if (formCookieData) {
+                        this.cookieStorage = formCookieData;
+                    }
+
+                    if (Object.keys(this.cookieStorage).length) {
+                        this.loadFormStorage();
+                    }
+                    this.addStorageListeners();
+                }
+                $(this.options.form).on('form-action', (ev) => {
+                    ev.stopPropagation();
+
+                    switch (ev.detail.action_type) {
+                        case 'next' :
+                            if ($(this.options.form).validation && !$(this.options.form).validation('isValid')) {
+                                break;
+                            }
+                            this.openTab(this.options.form, parseInt(ev.detail.tab_id, 10) + 1);
+                            break;
+                        case 'previous' :
+                            this.openTab(this.options.form, parseInt(ev.detail.tab_id, 10) - 1);
+                            break;
+                        case 'submit' :
+                            this.submitFormAction();
+                            break;
+                    }
+                });
+            });
+        },
+
+        loadForm : function () {
             const wconf = this.options.widgetConfig;
 
             let url = wconf.load_form_data_url;
@@ -40,41 +76,79 @@ define([
                 method: 'POST',
                 body : formData
             }).then((response) => {
-                console.log(response);
-            });
-
-            this.options.form = document.getElementById(this.options.formId);
-
-            let formCookieData = this.getFormCookieData(this.options.formId);
-            if (formCookieData) {
-                this.cookieStorage = formCookieData;
-            }
-
-            if (Object.keys(this.cookieStorage).length) {
-                this.loadFormStorage();
-            }
-            this.addStorageListeners();
-
-
-            $(this.options.form).on('form-action', (ev) => {
-                ev.stopPropagation();
-
-                switch (ev.detail.action_type) {
-                    case 'next' :
-                        if ($(this.options.form).validation && !$(this.options.form).validation('isValid')) {
-                            break;
-                        }
-                        this.openTab(this.options.form, parseInt(ev.detail.tab_id, 10) + 1);
-                        break;
-                    case 'previous' :
-                        this.openTab(this.options.form, parseInt(ev.detail.tab_id, 10) - 1);
-                        break;
-                    case 'submit' :
-                        this.submitFormAction();
-                        break;
+                if (response.ok) {
+                    return response.json();
                 }
+                window.alert('Something went wrong');
+            }).then ((data) => {
+                console.log(data);
+                if (!data.error) {
+                    if ('edit' === wconf.form_mode) {
+                        let fields = data.data || {};
+                        Object.keys(data.data).forEach((key) => {
+                            let name = key;
+                            if (Array.isArray(fields[key])) {
+                                name = name + '[]';
+                            }
+                            let field = document.querySelector('[name="' + name + '"]');
+                            let event = new CustomEvent('change');
+                            if (field) {
+                                let tag = field.tagName.toLowerCase();
+                                if ('textarea' === tag) {
+                                    field.value = fields[key];
+                                    field.dispatchEvent(event);
+                                }
+                                if ('input' === tag) {
+                                    let type = field.getAttribute('type');
+                                    if ('file' === type) {
+                                        return;
+                                    }
+                                    if ('text' === type) {
+                                        field.value = fields[key];
+                                        field.dispatchEvent(event);
+                                    }
+                                    if ('date' === type) {
+                                        field.value = fields[key].split(' ')[0];
+                                        field.dispatchEvent(event);
+                                    }
+                                    if ('radio' === type) {
+                                        let radios = document.querySelectorAll('[name="' + key + '"]');
+                                        Array.from(radios).every((radio) => {
+                                            if (radio.value === fields[key]) {
+                                                radio.checked = true;
+                                                radio.dispatchEvent(event);
+                                                return false;
+                                            }
+                                            return true;
+                                        });
+                                    }
+                                }
+                                if ('select' === tag) {
+                                    Array.from(field.options).forEach((item) => {
+                                        if (Array.isArray(fields[key])) {
+                                            fields[key].forEach((value) => {
+                                                if (item.value === value) {
+                                                    item.selected = true;
+                                                }
+                                            });
+                                        } else {
+                                            field.value = fields[key];
+                                        }
+                                        field.dispatchEvent(event);
+                                    });
+                                }
+                            }
+                        });
+                    }
+                } else {
+                    //error
+                    window.alert('Error');
+                    console.log(data.messages);
+                }
+                return data;
             });
 
+            return result;
         },
 
         loadFormStorage : function () {
@@ -288,6 +362,12 @@ define([
 
             let self = this;
             const formData = new FormData(this.options.form);
+            formData.append('form_mode', this.options.widgetConfig.form_mode);
+
+            let additional = this.getCurrentUrlParams();
+            if (Object.keys(additional).length) {
+                formData.append('additional_params', JSON.stringify(additional));
+            }
 
             $.ajax({
                 url: this.options.formSubmitUrl,

@@ -7,6 +7,7 @@ declare(strict_types=1);
 
 namespace Alekseon\WidgetForms\Controller\Form;
 
+use Alekseon\CustomFormsBuilder\Model\ResourceModel\FormRecord;
 use Magento\Framework\App\Action\Context;
 use Magento\Framework\App\Action\HttpPostActionInterface as HttpPostActionInterface;
 use Magento\Framework\Exception\LocalizedException;
@@ -41,6 +42,15 @@ class Submit implements HttpPostActionInterface
      * @var \Alekseon\CustomFormsBuilder\Model\FormRecordFactory
      */
     private $formRecordFactory;
+
+
+    private $formRecordCollectionFactory;
+
+    private $orderCollectionFactory;
+
+    private $orderItemCollectionFactory;
+
+    private $customerSession;
     /**
      * @var \Magento\Framework\Data\Form\FormKey\Validator
      */
@@ -59,6 +69,10 @@ class Submit implements HttpPostActionInterface
         \Magento\Framework\Controller\Result\JsonFactory $jsonFactory,
         \Alekseon\CustomFormsBuilder\Model\FormRepository $formRepository,
         \Alekseon\CustomFormsBuilder\Model\FormRecordFactory $formRecordFactory,
+        \Alekseon\CustomFormsBuilder\Model\ResourceModel\FormRecord\CollectionFactory $formRecordCollectionFactory,
+        \Magento\Sales\Model\ResourceModel\Order\CollectionFactory $orderCollectionFactory,
+        \Magento\Sales\Model\ResourceModel\Order\Item\CollectionFactory $orderItemCollectionFactory,
+        \Magento\Customer\Model\Session $customerSession,
         \Magento\Framework\Data\Form\FormKey\Validator $formKeyValidator,
         \Psr\Log\LoggerInterface $logger
     ) {
@@ -66,6 +80,10 @@ class Submit implements HttpPostActionInterface
         $this->response = $context->getResponse();
         $this->eventManager = $context->getEventManager();
         $this->formRecordFactory = $formRecordFactory;
+        $this->formRecordCollectionFactory = $formRecordCollectionFactory;
+        $this->orderCollectionFactory = $orderCollectionFactory;
+        $this->orderItemCollectionFactory = $orderItemCollectionFactory;
+        $this->customerSession = $customerSession;
         $this->jsonFactory = $jsonFactory;
         $this->formRepository = $formRepository;
         $this->formKeyValidator = $formKeyValidator;
@@ -83,7 +101,138 @@ class Submit implements HttpPostActionInterface
             $form = $this->getForm();
             $this->validateData();
             $post = $this->getRequest()->getPost();
-            $formRecord = $this->formRecordFactory->create();
+
+            $additional = $this->getRequest()->getParam('additional_params');
+            if ($additional) {
+                $additional = json_decode($additional, true);
+            }
+
+            $formMode = $this->getRequest()->getParam('form_mode');
+            $allowGuestSubmit = (bool) $form->getData('allow_guest_submit');
+            $isLoggedIn = $this->customerSession->isLoggedIn();
+
+            if (('edit' === $formMode || false === $allowGuestSubmit) && !$isLoggedIn) {
+                throw new LocalizedException(__('Please log in'));
+            }
+
+            $recordId = null;
+
+            if ('edit' === $formMode) {
+                if (!$additional ||
+                    !array_key_exists('record_id', $additional) ||
+                    !is_numeric($additional['record_id'])) {
+
+                    throw new LocalizedException(__('Invalid request.'));
+                }
+                $recordId = $additional['record_id'];
+            }
+
+            $requiredParams = $form->getData('required_record_params') ?
+                $form->getData('required_record_params') : null;
+
+            if ($requiredParams && (in_array('order_id', $requiredParams) || in_array('order_item_id', $requiredParams))) {
+                if (!$isLoggedIn) {
+                    throw new LocalizedException(__('Please log in'));
+                }
+            }
+
+            if (in_array('order_id', $requiredParams)) {
+                if (!$additional ||
+                    !array_key_exists('order_id', $additional) ||
+                    !is_numeric($additional['order_id'])) {
+
+                    throw new LocalizedException(__('Invalid request.'));
+                }
+            }
+
+            if (in_array('order_id', $requiredParams)) {
+                if (!$additional ||
+                    !array_key_exists('order_item_id', $additional) ||
+                    !is_numeric($additional['order_item_id'])) {
+
+                    throw new LocalizedException(__('Invalid request.'));
+                }
+            }
+
+            $order = $orderItem = null;
+
+            if (in_array('order_item_id', $requiredParams)) {
+                $orderItemCollection = $this->orderItemCollectionFactory->create();
+                $orderItemCollection
+                    ->addFieldToFilter('item_id', $additional['order_item_id']);
+
+                if (in_array('order_id', $requiredParams)) {
+                    $orderItemCollection
+                        ->addFieldToFilter('order_id', ['eq' => $additional['order_id']]);
+                }
+
+                if (!$orderItemCollection->getSize()) {
+                    throw new LocalizedException(__('Invalid request'));
+                }
+
+                /** @var \Magento\Sales\Model\Order\Item $orderItem */
+                $orderItem = $orderItemCollection->getFirstItem();
+
+                $order = $orderItem->getOrder();
+                if ((!$order || !$order->getId())) {
+                    throw new LocalizedException(__('Invalid request'));
+                }
+
+                if (array_key_exists('order_id', $requiredParams) &&
+                    (int)$order->getId() !== (int) $additional['order_id']) {
+                    throw new LocalizedException(__('Invalid request'));
+                }
+
+                if ((int)$this->customerSession->getCustomerId() !== (int) $order->getCustomerId()) {
+                    throw new LocalizedException(__('Invalid request'));
+                }
+            } else if (in_array('order_id', $requiredParams)) {
+                $orderCollection = $this->orderCollectionFactory->create();
+                $orderCollection
+                    ->addFieldToFilter('entity_id', ['eq' => $additional['order_id']]);
+
+                if (!$orderCollection->getSize()) {
+                    throw new LocalizedException(__('Invalid request'));
+                }
+
+                $order = $orderCollection->getFirstItem();
+                if ((int)$this->customerSession->getCustomerId() !== (int) $order->getCustomerId()) {
+                    throw new LocalizedException(__('Invalid request'));
+                }
+            }
+
+            $formRecord = null;
+
+            if ('edit' === $formMode) {
+                $formRecordCollection = $this->formRecordCollectionFactory->create();
+                $formRecordCollection
+                    ->addFieldToFilter('entity_id', ['eq' => $recordId])
+                    ->addFieldToFilter('customer_id', ['eq' => $this->customerSession->getCustomerId()]);
+
+                if (in_array('order_id', $requiredParams)) {
+                    $formRecordCollection
+                        ->addFieldToFilter('order_id', ['eq' => $additional['order_id']]);
+                }
+                if (in_array('order_item_id', $requiredParams)) {
+                    $formRecordCollection
+                        ->addFieldToFilter('order_item_id', ['eq' => $additional['order_item_id']]);
+                }
+
+                if (!$formRecordCollection->getSize()) {
+                    throw new LocalizedException(__('Invalid request'));
+                }
+                $formRecord = $formRecordCollection->getFirstItem();
+            } else {
+                $formRecord = $this->formRecordFactory->create();
+                $formRecord->setData('customer_id', $this->customerSession->getCustomerId());
+                if (in_array('order_id', $requiredParams)) {
+                    $formRecord->setData('order_id', $additional['order_id']);
+                }
+                if (in_array('order_item_id', $requiredParams)) {
+                    $formRecord->setData('order_item_id', $additional['order_item_id']);
+                }
+            }
+
             $formRecord->getResource()->setCurrentForm($form);
             $formRecord->setStoreId($form->getStoreId());
             $formRecord->setFormId($form->getId());
@@ -161,6 +310,10 @@ class Submit implements HttpPostActionInterface
 
         if ($this->getRequest()->getParam('hideit')) {
             throw new LocalizedException(__('Interrupted Data'));
+        }
+
+        if (!$this->getRequest()->getParam('form_mode') || !in_array($this->getRequest()->getParam('form_mode'), ['new', 'edit'])) {
+            throw new LocalizedException(__('Mode not specified.'));
         }
     }
 

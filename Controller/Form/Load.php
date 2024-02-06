@@ -62,6 +62,7 @@ class Load implements \Magento\Framework\App\Action\HttpPostActionInterface
     protected $customerSession;
 
 
+
     public function __construct(
         FormRepository $formRepository,
         OrderCollectionFactory $orderCollectionFactory,
@@ -95,22 +96,40 @@ class Load implements \Magento\Framework\App\Action\HttpPostActionInterface
             'allow_guest_submit' => null,
             'guest_submit_invalidated' => false,
             'missing_params' => [],
-            'validated' => false,
-            'messages' => []
+            'require_login' => false,
+            'form_data' => null,
+            'messages' => [],
+            'redirect_url' => null
         ];
 
         try {
             if (!$this->formkeyValidator->validate($this->request)) {
-                throw new LocalizedException(__());
+                throw new LocalizedException(__('Your session has expired.'));
             }
 
             $result['is_logged_in'] = $this->customerSession->isLoggedIn();
 
             if (!($formMode = $this->request->getParam('form_mode')) || !in_array($formMode, ['new', 'edit'])) {
+                $result['missing_params'][] = 'form_mode';
                 throw new LocalizedException(__());
             }
 
+
+            if ('edit' === $formMode && !$result['is_logged_in']) {
+                $result['require_login'] = true;
+                throw new LocalizedException(__('Please log in.'));
+            }
+
             if (!($formId = $this->request->getParam('form_id'))) {
+                $result['missing_params'][] = 'form_id';
+                throw new LocalizedException(__());
+            }
+
+            $supplied = json_decode($this->request->getParam('form_params'), true);
+
+            $recordId = array_key_exists('record_id', $supplied) ? $supplied['record_id'] : null;
+            if ('edit' === $formMode && !is_numeric($recordId)) {
+                $result['missing_params'][] = 'record_id';
                 throw new LocalizedException(__());
             }
 
@@ -120,54 +139,125 @@ class Load implements \Magento\Framework\App\Action\HttpPostActionInterface
                 throw new LocalizedException(__());
             }
 
+            $required = $form->getData('required_record_params') ?? [];
             $result['allow_guest_submit'] = (bool) $form->getData('allow_guest_submit');
 
+            if (!$result['allow_guest_submit'] && !$result['is_logged_in']) {
+                $result['require_login'] = true;
+                throw new LocalizedException(__('Please log in.'));
+            }
 
-            $required = $form->getData('required_record_params') ?? [];
-            $supplied = json_decode($this->request->getParam('form_params'), true);
 
-            $validate = true;
+            $valid = true;
 
             if (in_array('order_id', $required) ) {
                 if (!$result['is_logged_in']) {
                     $result['guest_submit_invalidated'] = true;
-                    $validate = false;
+                    $valid = false;
                 } else if (!array_key_exists('order_id', $supplied) || !is_numeric($supplied['order_id'])) {
                     $result['missing_params'][] = 'order_id';
-                    $validate = false;
+                    $valid = false;
                 }
             }
 
             if (in_array('order_item_id', $required)) {
                 if (!$result['is_logged_in']) {
                     $result['guest_submit_invalidated'] = true;
-                    $validate = false;
+                    $valid = false;
                 } else if (!array_key_exists('order_item_id', $supplied) || !is_numeric($supplied['order_item_id'])) {
                     $result['missing_params'][] = 'order_item_id';
-                    $validate = false;
+                    $valid = false;
+                }
+            }
+
+            $order = $orderItem = null;
+
+            if ($valid) {
+                if (in_array('order_item_id', $required)) {
+                    $orderItemCollection = $this->orderItemCollectionFactory->create();
+                    $orderItemCollection
+                        ->addFieldToFilter('item_id', ['eq' => $supplied['order_item_id']]);
+
+                    if (!$orderItemCollection->getSize()) {
+                        $valid = false;
+                    } else {
+                        /** @var \Magento\Sales\Model\Order\Item $orderItem */
+                        $orderItem = $orderItemCollection->getFirstItem();
+                        $order = $orderItem->getOrder();
+
+                        if  (!$order || !is_numeric($order->getId())) {
+                            $valid = false;
+                        }
+
+                        if (in_array('order_id', $required) && (int)$supplied['order_id'] !== (int)$order->getId()) {
+                            $valid = false;
+                        }
+
+                        if ((int)$this->customerSession->getCustomerId() !== (int) $order->getCustomerId()) {
+                            $valid = false;
+                        }
+
+                    }
+                } else if (in_array('order_id', $required)) {
+                    $orderCollection = $this->orderCollectionFactory->create();
+                    $orderCollection
+                        ->addFieldToFilter('entity_id', ['eq' => $supplied['order_id']])
+                        ->addFieldToFilter('customer_id', ['eq' => $this->customerSession->getCustomerId()]);
+
+                    if (!$orderCollection->getSize()) {
+                        $valid = false;
+                    } else {
+                        $order = $orderCollection->getFirstItem();
+                        if ((int) $this->customerSession->getCustomerId() !== (int) $order->getCustomerId()) {
+                            $valid = false;
+                        }
+                    }
+                }
+            }
+
+            if ($valid && 'edit' === $formMode) {
+                try {
+                    $formData = $form->getRecordById($recordId);
+                    if ((int)$this->customerSession->getCustomerId() !== (int) $formData->getData('customer_id')) {
+                        $valid = false;
+                    }
+                    if ($order && (int)$order->getId() !== (int)$formData->getData('order_id')) {
+                        $valid = false;
+                    }
+                    if ($orderItem && (int)$orderItem->getId() !== (int) $formData->getData('order_item_id')) {
+                        $valid = false;
+                    }
+
+                    if ($valid) {
+                        $filtered = array_filter($formData->getData(), function ($key) {
+                            return str_starts_with($key, 'field_');
+                        }, ARRAY_FILTER_USE_KEY);
+
+                        $result['data'] = $filtered;
+                    }
+                } catch (\Throwable $e) {
+
                 }
             }
 
 
-
-
-
-
+            $result['error'] = !$valid;
 
         } catch (\Throwable $e) {
             $message = 'Something went wrong';
             if ($e instanceof LocalizedException && strlen(trim($e->getMessage()))) {
                 $message = $e->getMessage();
             }
+            $result['error'] = true;
             $result['messages'][] = ['type' => 'error', 'text' => $message];
+
         }
 
-        if (!$this->customerSession->isLoggedIn()) {
-            $resultRedirect = $this->resultFactory->create(ResultFactory::TYPE_REDIRECT);
-            $resultRedirect->setPath('customer/account/login');
+        $resultJson = $this->resultFactory->create(ResultFactory::TYPE_JSON);
+        $resultJson->setData($result);
 
-            return $resultRedirect;
-        }
+        return $resultJson;
+
     }
 
     public function matchParams ($required, $supplied) {
