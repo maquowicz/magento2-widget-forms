@@ -62,8 +62,8 @@ define([
             const wconf = this.options.widgetConfig;
 
             let url = wconf.load_form_data_url;
-            let params = this.getCurrentUrlParams();
-            json = JSON.stringify(json);
+            const params = this.getCurrentUrlParams();
+            let json = JSON.stringify(params);
 
             let formData = new FormData();
             formData.append('form_mode', wconf.form_mode || 'new');
