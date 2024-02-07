@@ -25,6 +25,10 @@ define([
 
         _create: function () {
             this.options.form = document.getElementById(this.options.formId);
+
+            if (!this.options.widgetConfig.form_mode) {
+                this.options.widgetConfig.form_mode = 'new';
+            }
             this.loadForm().then((data) => {
                 if ('new' === this.options.widgetConfig.form_mode) {
                     let formCookieData = this.getFormCookieData(this.options.formId);
@@ -66,7 +70,7 @@ define([
             let json = JSON.stringify(params);
 
             let formData = new FormData();
-            formData.append('form_mode', wconf.form_mode || 'new');
+            formData.append('form_mode', wconf.form_mode);
             formData.append('form_id', wconf.backend_form_id);
             formData.append('form_key', $.cookie('form_key'));
             formData.append('form_params', json);
