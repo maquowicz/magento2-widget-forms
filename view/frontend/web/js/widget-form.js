@@ -24,7 +24,6 @@ define([
         cookieStorage : {},
 
         _create: function () {
-            return;
             this.options.form = document.getElementById(this.options.formId);
             this.loadForm().then((data) => {
                 if ('new' === this.options.widgetConfig.form_mode) {
@@ -305,10 +304,12 @@ define([
 
                     let m2 = split[0].split('/');
                     if (m2.length > 3) {
-                        for (let i = 3; i < m2.length; i+2) {
+                        for (let i = 3; i < m2.length; i = i+2) {
                             if (m2[0].length) {
-                                if (m2.length > i+2 && m2[1].length) {
-                                    params[decodeURIComponent(m2[i])] = decodeURIComponent(m2[i+1]);
+                                if (m2.length >= (i+2)) {
+                                    if (m2[1].length) {
+                                        params[decodeURIComponent(m2[i])] = decodeURIComponent(m2[i+1]);
+                                    }
                                 } else {
                                     params[decodeURIComponent(m2[i])] = null;
                                     break;
