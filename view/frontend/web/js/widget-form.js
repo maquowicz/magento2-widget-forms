@@ -24,7 +24,7 @@ define([
         cookieStorage : {},
 
         _create: function () {
-
+            return;
             this.options.form = document.getElementById(this.options.formId);
             this.loadForm().then((data) => {
                 if ('new' === this.options.widgetConfig.form_mode) {

@@ -100,18 +100,17 @@ class Index implements \Magento\Framework\App\Action\HttpGetActionInterface
         $resultPage = $this->resultFactory->create(ResultFactory::TYPE_PAGE);
 
         /** @var \Magento\Framework\View\Element\Template $container */
-        $container = $this->layout->getBlock('alekseon_form_container');
-
-        $block = $this->layout->createBlock(\Alekseon\WidgetForms\Block\WidgetForm::class);
+        $block = $this->layout->getBlock('alekseon_form');
         $block->setData('form_id', $this->request->getParam('form_id'));
         $block->setData('form_mode', 'edit');
 
-        $container->setChild('alekseon_form', $block);
-
-
+        /*
+        $container->addChild('alekseon_form', \Alekseon\WidgetForms\Block\WidgetForm::class, [
+            'form_id' => $this->request->getParam('form_id'),
+            'form_mode' => 'edit'
+        ]); */
 
         return $resultPage;
-
 
     }
 }
