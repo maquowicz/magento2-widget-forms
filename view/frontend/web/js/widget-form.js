@@ -282,7 +282,7 @@ define([
             return this;
         },
 
-        getCurrentUrlParams : function () {
+        getCurrentUrlParams : function (ignore) {
             let o = window.location.origin, h = window.location.href;
             let params = {};
 
@@ -336,6 +336,13 @@ define([
                     }
                 }
             }
+            if (ignore && Array.isArray(ignore)) {
+                Object.keys(params).forEach((key) => {
+                    if (-1 !== ignore.indexOf(key)) {
+                        delete params[key];
+                    }
+                });
+            }
             return params;
         },
 
@@ -365,9 +372,14 @@ define([
             const formData = new FormData(this.options.form);
             formData.append('form_mode', this.options.widgetConfig.form_mode);
 
-            let additional = this.getCurrentUrlParams();
+            let additional = this.getCurrentUrlParams(['referrer']);
             if (Object.keys(additional).length) {
                 formData.append('additional_params', JSON.stringify(additional));
+            }
+
+            let params = this.getCurrentUrlParams();
+            if (params && params.referrer) {
+                formData.append('referrer', params.referrer);
             }
 
             $.ajax({
@@ -412,6 +424,10 @@ define([
             this.options.form.reset();
             if (this.options.currentTab !== 1) {
                 this.openTab(this.options.form, 1);
+            }
+
+            if (response.redirect_url) {
+                window.location.href = response.redirect_url;
             }
         }
     });

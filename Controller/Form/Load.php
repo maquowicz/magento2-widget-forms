@@ -27,6 +27,7 @@ use Magento\Sales\Model\ResourceModel\Order\Item\CollectionFactory as OrderItemC
 use Magento\Framework\App\RequestInterface;
 use Magento\Framework\Controller\ResultFactory;
 use Magento\Framework\UrlInterface;
+use Magento\Framework\Url\Decoder as UrlDecoder;
 use Magento\Framework\Data\Form\FormKey;
 use Magento\Framework\Data\Form\FormKey\Validator as FormkeyValidator;
 use Magento\Customer\Model\Session as CustomerSession;
@@ -50,6 +51,8 @@ class Load implements \Magento\Framework\App\Action\HttpPostActionInterface
     /** @var UrlInterface  */
     protected $urlBuilder;
 
+    protected $urlDecoder;
+
     /** @var FormKey  */
     protected $formkey;
 
@@ -70,6 +73,7 @@ class Load implements \Magento\Framework\App\Action\HttpPostActionInterface
         RequestInterface $request,
         ResultFactory $resultFactory,
         UrlInterface $urlBuilder,
+        UrlDecoder $urlDecoder,
         Formkey $formkey,
         FormkeyValidator $formkeyValidator,
         CustomerSession $customerSession
@@ -82,6 +86,7 @@ class Load implements \Magento\Framework\App\Action\HttpPostActionInterface
         $this->request = $request;
         $this->resultFactory = $resultFactory;
         $this->urlBuilder = $urlBuilder;
+        $this->urlDecoder = $urlDecoder;
         $this->formkey = $formkey;
         $this->formkeyValidator = $formkeyValidator;
         $this->customerSession = $customerSession;

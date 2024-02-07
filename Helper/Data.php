@@ -4,6 +4,7 @@ namespace Alekseon\WidgetForms\Helper;
 
 use Magento\Customer\Model\Session as CustomerSession;
 use Alekseon\CustomFormsBuilder\Model\ResourceModel\FormRecord\CollectionFactory as FormRecordCollectionFactory;
+use Magento\Framework\Url\Encoder as UrlEncoder;
 
 use Magento\Framework\App\Helper\AbstractHelper;
 use Magento\Framework\App\Helper\Context;
@@ -18,6 +19,8 @@ class Data extends AbstractHelper implements ArgumentInterface
     protected $formRecordCollectionFactory;
 
     protected $customerSession;
+
+    protected $urlEncoder;
 
     /** @var \Magento\Framework\View\LayoutInterface  */
     protected $layout;
@@ -35,6 +38,7 @@ class Data extends AbstractHelper implements ArgumentInterface
     public function __construct(
         FormRecordCollectionFactory $formRecordCollectionFactory,
         CustomerSession $customerSession,
+        UrlEncoder $urlEncoder,
         Context $context,
         LayoutInterface $layout,
         StoreManagerInterface $storeManager,
@@ -43,6 +47,7 @@ class Data extends AbstractHelper implements ArgumentInterface
 
         $this->formRecordCollectionFactory = $formRecordCollectionFactory;
         $this->customerSession = $customerSession;
+        $this->urlEncoder = $urlEncoder;
         $this->layout = $layout;
         $this->storeManager = $storeManager;
         $this->urlBuilder = $context->getUrlBuilder();
@@ -90,6 +95,9 @@ class Data extends AbstractHelper implements ArgumentInterface
         $params = [
             'form_id'   => $item['form_id'],
             'record_id' => $item['entity_id'],
+            'referrer'  => $this->urlEncoder->encode(
+                 $this->_getUrl('*/*/*', ['_current' => true, '_use_rewrite' => true])
+            ),
             '_secure'   => true
         ];
 

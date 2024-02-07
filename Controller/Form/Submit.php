@@ -8,6 +8,7 @@ declare(strict_types=1);
 namespace Alekseon\WidgetForms\Controller\Form;
 
 use Alekseon\CustomFormsBuilder\Model\ResourceModel\FormRecord;
+use Magento\Framework\Url\Decoder as UrlDecoder;
 use Magento\Framework\App\Action\Context;
 use Magento\Framework\App\Action\HttpPostActionInterface as HttpPostActionInterface;
 use Magento\Framework\Exception\LocalizedException;
@@ -43,6 +44,10 @@ class Submit implements HttpPostActionInterface
      */
     private $formRecordFactory;
 
+    private $urlBuilder;
+
+    private $urlDecoder;
+
 
     private $formRecordCollectionFactory;
 
@@ -72,6 +77,8 @@ class Submit implements HttpPostActionInterface
         \Alekseon\CustomFormsBuilder\Model\ResourceModel\FormRecord\CollectionFactory $formRecordCollectionFactory,
         \Magento\Sales\Model\ResourceModel\Order\CollectionFactory $orderCollectionFactory,
         \Magento\Sales\Model\ResourceModel\Order\Item\CollectionFactory $orderItemCollectionFactory,
+        \Magento\Framework\UrlInterface $urlBuilder,
+        \Magento\Framework\Url\Decoder $urlDecoder,
         \Magento\Customer\Model\Session $customerSession,
         \Magento\Framework\Data\Form\FormKey\Validator $formKeyValidator,
         \Psr\Log\LoggerInterface $logger
@@ -84,6 +91,8 @@ class Submit implements HttpPostActionInterface
         $this->orderCollectionFactory = $orderCollectionFactory;
         $this->orderItemCollectionFactory = $orderItemCollectionFactory;
         $this->customerSession = $customerSession;
+        $this->urlBuilder = $urlBuilder;
+        $this->urlDecoder = $urlDecoder;
         $this->jsonFactory = $jsonFactory;
         $this->formRepository = $formRepository;
         $this->formKeyValidator = $formKeyValidator;
@@ -245,12 +254,24 @@ class Submit implements HttpPostActionInterface
 
             $formRecord->getResource()->save($formRecord);
             $this->eventManager->dispatch('alekseon_widget_form_after_submit', ['form_record' => $formRecord]);
+
+            $referrer = $this->getRequest()->getParam('referrer');
+            if ($referrer) {
+                $referrer = $this->urlDecoder->decode($referrer);
+            }
+
+            $payload = [
+                'title' => $this->getSuccessTitle($formRecord),
+                'message' => $this->getSuccessMessage($formRecord),
+            ];
+            if ($referrer && filter_var($referrer, FILTER_VALIDATE_URL)) {
+                if (str_starts_with($referrer, $this->urlBuilder->getBaseUrl())) {
+                    $payload['redirect_url'] = $referrer;
+                }
+            }
+            $payload['errors'] = false;
             $resultJson->setData(
-                [
-                    'errors' => false,
-                    'title' => $this->getSuccessTitle($formRecord),
-                    'message' => $this->getSuccessMessage($formRecord),
-                ]
+                $payload
             );
         } catch (LocalizedException $e) {
             $resultJson->setData(
