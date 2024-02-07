@@ -7,11 +7,11 @@ declare(strict_types=1);
 
 namespace Alekseon\WidgetForms\Controller\Form;
 
-use Alekseon\CustomFormsBuilder\Model\ResourceModel\FormRecord;
-use Magento\Framework\Url\Decoder as UrlDecoder;
+use Magento\Framework\App\Filesystem\DirectoryList;
 use Magento\Framework\App\Action\Context;
 use Magento\Framework\App\Action\HttpPostActionInterface as HttpPostActionInterface;
 use Magento\Framework\Exception\LocalizedException;
+
 
 /**
  * Class Submit
@@ -43,6 +43,8 @@ class Submit implements HttpPostActionInterface
      * @var \Alekseon\CustomFormsBuilder\Model\FormRecordFactory
      */
     private $formRecordFactory;
+
+    private $directoryList;
 
     private $urlBuilder;
 
@@ -77,6 +79,7 @@ class Submit implements HttpPostActionInterface
         \Alekseon\CustomFormsBuilder\Model\ResourceModel\FormRecord\CollectionFactory $formRecordCollectionFactory,
         \Magento\Sales\Model\ResourceModel\Order\CollectionFactory $orderCollectionFactory,
         \Magento\Sales\Model\ResourceModel\Order\Item\CollectionFactory $orderItemCollectionFactory,
+        \Magento\Framework\App\Filesystem\DirectoryList $directoryList,
         \Magento\Framework\UrlInterface $urlBuilder,
         \Magento\Framework\Url\Decoder $urlDecoder,
         \Magento\Customer\Model\Session $customerSession,
@@ -91,6 +94,7 @@ class Submit implements HttpPostActionInterface
         $this->orderCollectionFactory = $orderCollectionFactory;
         $this->orderItemCollectionFactory = $orderItemCollectionFactory;
         $this->customerSession = $customerSession;
+        $this->directoryList = $directoryList;
         $this->urlBuilder = $urlBuilder;
         $this->urlDecoder = $urlDecoder;
         $this->jsonFactory = $jsonFactory;
@@ -231,6 +235,11 @@ class Submit implements HttpPostActionInterface
                     throw new LocalizedException(__('Invalid request'));
                 }
                 $formRecord = $formRecordCollection->getFirstItem();
+
+                $formRecord->getResource()->setCurrentForm($form);
+                $formRecord->setStoreId($form->getStoreId());
+                $formRecord->setFormId($form->getId());
+                $formRecord->getResource()->load($formRecord, $formRecord->getId());
             } else {
                 $formRecord = $this->formRecordFactory->create();
                 $formRecord->setData('customer_id', $this->customerSession->getCustomerId());
@@ -240,15 +249,35 @@ class Submit implements HttpPostActionInterface
                 if (in_array('order_item_id', $requiredParams)) {
                     $formRecord->setData('order_item_id', $additional['order_item_id']);
                 }
+
+                $formRecord->getResource()->setCurrentForm($form);
+                $formRecord->setStoreId($form->getStoreId());
+                $formRecord->setFormId($form->getId());
             }
 
-            $formRecord->getResource()->setCurrentForm($form);
-            $formRecord->setStoreId($form->getStoreId());
-            $formRecord->setFormId($form->getId());
+
             $formFields = $form->getFieldsCollection();
             foreach ($formFields as $field) {
                 $fieldCode = $field->getAttributeCode();
+
                 $value = $post[$fieldCode] ?? $field->getDefaultValue();
+
+                // Check for old image, if it exists set old value on  formRecord - it's resource model will delete old file
+                // in after save method
+                if ($formRecord->getId()) {
+                    $attribute = $formRecord->getAttribute($fieldCode);
+                    if ($attribute && 'image' === $attribute->getData('frontend_input')) {
+                        $oldValue = $formRecord->getData($fieldCode);
+                        // Change it to file_exists check
+                        if (!empty($oldValue)) {
+                            $path = $this->directoryList->getPath(DirectoryList::MEDIA) . '/' . $oldValue;
+                            if (is_file($path)) {
+                                $value = $oldValue;
+                            }
+                        }
+                    }
+                }
+
                 $formRecord->setData($fieldCode, $value);
             }
 

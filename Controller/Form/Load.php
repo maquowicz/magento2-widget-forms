@@ -23,6 +23,8 @@ namespace Alekseon\WidgetForms\Controller\Form;
 use Alekseon\CustomFormsBuilder\Model\FormRepository;
 use Magento\Sales\Model\ResourceModel\Order\CollectionFactory as OrderCollectionFactory;
 use Magento\Sales\Model\ResourceModel\Order\Item\CollectionFactory as OrderItemCollectionFactory;
+use Magento\Framework\App\Filesystem\DirectoryList;
+use Magento\Store\Model\StoreManagerInterface;
 
 use Magento\Framework\App\RequestInterface;
 use Magento\Framework\Controller\ResultFactory;
@@ -41,6 +43,10 @@ class Load implements \Magento\Framework\App\Action\HttpPostActionInterface
     protected $orderCollectionFactory;
 
     protected $orderItemCollectionFactory;
+
+    protected $storeManager;
+
+    protected $directoryList;
 
     /** @var RequestInterface  */
     protected $request;
@@ -70,6 +76,8 @@ class Load implements \Magento\Framework\App\Action\HttpPostActionInterface
         FormRepository $formRepository,
         OrderCollectionFactory $orderCollectionFactory,
         OrderItemCollectionFactory $orderItemCollectionFactory,
+        StoreManagerInterface $storeManager,
+        DirectoryList $directoryList,
         RequestInterface $request,
         ResultFactory $resultFactory,
         UrlInterface $urlBuilder,
@@ -83,6 +91,8 @@ class Load implements \Magento\Framework\App\Action\HttpPostActionInterface
         $this->formRepository = $formRepository;
         $this->orderCollectionFactory = $orderCollectionFactory;
         $this->orderItemCollectionFactory = $orderItemCollectionFactory;
+        $this->storeManager = $storeManager;
+        $this->directoryList = $directoryList;
         $this->request = $request;
         $this->resultFactory = $resultFactory;
         $this->urlBuilder = $urlBuilder;
@@ -233,6 +243,7 @@ class Load implements \Magento\Framework\App\Action\HttpPostActionInterface
 
             if ($valid && 'edit' === $formMode) {
                 try {
+                    /** @var \Alekseon\CustomFormsBuilder\Model\FormRecord $formData */
                     $formData = $form->getRecordById($recordId);
                 } catch (\Throwable $e) {
                     $result['messages'][] = 'Cannot locate object (record)';
@@ -254,6 +265,28 @@ class Load implements \Magento\Framework\App\Action\HttpPostActionInterface
                     $filtered = array_filter($formData->getData(), function ($key) {
                         return str_starts_with($key, 'field_');
                     }, ARRAY_FILTER_USE_KEY);
+
+                    foreach ($filtered as $code => $value) {
+                        // Image data
+                        try {
+                            $attr = $formData->getAttribute($code);
+                            if ($attr) {
+                                $type = $attr->getData('frontend_input');
+                                if ('image' === $type) {
+                                    $path = $this->directoryList->getPath(DirectoryList::MEDIA) . '/' . $value;
+                                    if (is_file($path) && is_readable($path)) {
+                                        $mediaUrl = $this ->storeManager
+                                            ->getStore()
+                                            ->getBaseUrl(\Magento\Framework\UrlInterface::URL_TYPE_MEDIA);
+
+                                        $filtered[$code] = $mediaUrl . $value;
+                                    }
+                                }
+                            }
+                        } catch(\Throwable $e) {
+
+                        }
+                    }
 
                     $result['data'] = $filtered;
                 }

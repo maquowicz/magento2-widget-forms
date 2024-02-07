@@ -104,7 +104,15 @@ define([
                                 if ('input' === tag) {
                                     let type = field.getAttribute('type');
                                     if ('file' === type) {
-                                        return;
+                                       if (fields[key]) {
+                                           let w = document.createElement('div');
+                                           let a = document.createElement('a');
+                                           a.setAttribute('href', fields[key]);
+                                           a.innerText = 'link';
+                                           w.appendChild(a);
+                                           field.parentElement.appendChild(w);
+                                       }
+
                                     }
                                     if ('text' === type) {
                                         field.value = fields[key];
