@@ -30,7 +30,9 @@ class AvailableFormsOptions extends \Magento\Eav\Model\Entity\Attribute\Source\A
             $collection->addAttributeToSelect('title');
             $collection->addAttributeToFilter('can_use_for_widget', true);
 
-            $result = [];
+            $result = [
+                ['label' => '--Please Select--', 'value' => '']
+            ];
             /** @var \Alekseon\CustomFormsBuilder\Model\Form $item */
             foreach ($collection as $item) {
                 $result[] = ['label' => $item->getTitle(), 'value' => $item->getId()];
