@@ -188,7 +188,7 @@ class Data extends AbstractHelper implements ArgumentInterface
         $filterByOrder = null
     ) {
         $collection = $this->getFilteredRelatedFormsCollection($filterByCustomer, $filterByOrder);
-        return $collection->getConnection()->fetchAssoc($collection->getSelect());
+        return $collection->getConnection()->fetchAll($collection->getSelect());
     }
 
     public function getCustomerPendingFormsData ($customerId) {
@@ -203,7 +203,7 @@ class Data extends AbstractHelper implements ArgumentInterface
         );
 
         $collection->getSelect()->where('form_records.entity_id IS NULL');
-        return $collection->getConnection()->fetchAssoc($collection->getSelect());
+        return $collection->getConnection()->fetchAll($collection->getSelect());
     }
 
     public function getOrderPendingFormsData ($orderId, $customerId = null) {
@@ -218,10 +218,12 @@ class Data extends AbstractHelper implements ArgumentInterface
             []
         );
         $collection->getSelect()->where('form_records.entity_id IS NULL');
-        $sqlResult = $collection->getConnection()->fetchAssoc($collection->getSelect());
+        ob_start();
+        echo $collection->getSelect();
+        $t = ob_get_clean();
+        $sqlResult = $collection->getConnection()->fetchAll($collection->getSelect());
 
-        $result = [];
-        foreach ($sqlResult as $item) {
+        foreach ($sqlResult as &$item) {
             if (array_key_exists('alekseon_form_url_key', $item)) {
                 $item['form_url'] = $this->getFormUrlByKey($item['alekseon_form_url_key'], [
                     'customer_id' => $item['customer_id'],
@@ -235,7 +237,7 @@ class Data extends AbstractHelper implements ArgumentInterface
             $result[$item['item_id']] = $item;
         }
 
-        return $result;
+        return $sqlResult;
     }
 
 
