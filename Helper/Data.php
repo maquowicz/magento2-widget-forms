@@ -4,6 +4,9 @@ namespace Alekseon\WidgetForms\Helper;
 
 use Magento\Customer\Model\Session as CustomerSession;
 use Alekseon\CustomFormsBuilder\Model\ResourceModel\FormRecord\CollectionFactory as FormRecordCollectionFactory;
+use Magento\Catalog\Model\ResourceModel\Product\CollectionFactory as ProductCollectionFactory;
+use Magento\Sales\Model\ResourceModel\Order\CollectionFactory as OrderCollectionFactory;
+use Magento\Framework\Url as UrlFrontBuilder;
 use Magento\Framework\Url\Encoder as UrlEncoder;
 
 use Magento\Framework\App\Helper\AbstractHelper;
@@ -18,9 +21,15 @@ class Data extends AbstractHelper implements ArgumentInterface
 {
     protected $formRecordCollectionFactory;
 
+    protected $productCollectionFactory;
+
+    protected $orderCollectionFactory;
+
     protected $customerSession;
 
     protected $urlEncoder;
+
+    protected $urlFrontBuilder;
 
     /** @var \Magento\Framework\View\LayoutInterface  */
     protected $layout;
@@ -37,7 +46,10 @@ class Data extends AbstractHelper implements ArgumentInterface
 
     public function __construct(
         FormRecordCollectionFactory $formRecordCollectionFactory,
+        ProductCollectionFactory $productCollectionFactory,
+        OrderCollectionFactory $orderCollectionFactory,
         CustomerSession $customerSession,
+        UrlFrontBuilder $urlFrontBuilder,
         UrlEncoder $urlEncoder,
         Context $context,
         LayoutInterface $layout,
@@ -46,7 +58,11 @@ class Data extends AbstractHelper implements ArgumentInterface
         parent::__construct($context);
 
         $this->formRecordCollectionFactory = $formRecordCollectionFactory;
+        $this->productCollectionFactory = $productCollectionFactory;
+        $this->orderCollectionFactory = $orderCollectionFactory;
+
         $this->customerSession = $customerSession;
+        $this->urlFrontBuilder = $urlFrontBuilder;
         $this->urlEncoder = $urlEncoder;
         $this->layout = $layout;
         $this->storeManager = $storeManager;
@@ -110,5 +126,138 @@ class Data extends AbstractHelper implements ArgumentInterface
         return $this->_getUrl('Alekseon_WidgetForms/form_edit/index', $params);
     }
 
+    public function getFilteredRelatedFormsCollection($filterByCustomer = null, $filterByOrder = null) {
 
+        if (null === $filterByOrder && null === $filterByCustomer) {
+            throw new \Magento\Framework\Exception\LocalizedException(__('Unfiltered query is not allowed.'));
+        }
+
+        /** @var \Magento\Catalog\Model\ResourceModel\Product\Collection $collection */
+        $collection = $this->productCollectionFactory->create();
+        $collection->getSelect()->reset(\Magento\Framework\DB\Select::COLUMNS);
+        $collection->getSelect()->columns(['entity_id', 'sku']);
+
+        $attributeCodes = [
+            'name',
+            'alekseon_related_form',
+            'alekseon_form_url_key'
+        ];
+
+        $collection
+            ->addAttributeToSelect($attributeCodes, 'left')
+            ->addFieldToFilter([
+                ['attribute' => 'alekseon_related_form', 'notnull' => true],
+                ['attribute' => 'alekseon_form_url_key', 'notnull' => true]
+            ]);
+
+        $o_collection = $this->orderCollectionFactory->create();
+        $o_collection->getSelect()->reset(\Magento\Framework\DB\Select::COLUMNS);
+        if ($filterByCustomer) {
+            if (!is_array($filterByCustomer)) {
+                $filterByCustomer = [$filterByCustomer];
+            }
+            $o_collection->addFieldToFilter('customer_id', ['in' => $filterByCustomer]);
+        }
+
+        if ($filterByOrder) {
+            if (!is_array($filterByOrder)) {
+                $filterByOrder = [$filterByOrder];
+                $o_collection->addFieldToFilter('entity_id', ['in' => $filterByOrder]);
+            }
+        }
+
+        $o_collection->getSelect()->columns(['order_id' => 'entity_id', 'customer_id' => 'customer_id']);
+
+        $o_collection->getSelect()->join(
+            ['o_item' => 'sales_order_item'],
+            'main_table.entity_id = o_item.order_id',
+            ['item_id', 'product_id']
+        );
+
+        $o_collection->getSelect()->join(
+            ['prd' => new \Zend_Db_Expr('(' . $collection->getSelect() . ')')],
+            'o_item.product_id = prd.entity_id',
+            ['alekseon_related_form', 'alekseon_form_url_key', 'name', 'sku']
+        );
+
+        return $o_collection;
+    }
+
+    public function  getRelatedFormsData (
+        $filterByCustomer = null,
+        $filterByOrder = null
+    ) {
+        $collection = $this->getFilteredRelatedFormsCollection($filterByCustomer, $filterByOrder);
+        return $collection->getConnection()->fetchAssoc($collection->getSelect());
+    }
+
+    public function getCustomerPendingFormsData ($customerId) {
+        if (!is_numeric($customerId)) {
+            throw new \Exception('Invalid customer id');
+        }
+        $collection = $this->getFilteredRelatedFormsCollection($customerId);
+        $collection->getSelect()->joinLeft(
+            ['form_records' => 'alekseon_custom_form_record'],
+            'main_table.customer_id = form_records.customer_id AND main_table.entity_id = form_records.order_id',
+            []
+        );
+
+        $collection->getSelect()->where('form_records.entity_id IS NULL');
+        return $collection->getConnection()->fetchAssoc($collection->getSelect());
+    }
+
+    public function getOrderPendingFormsData ($orderId, $customerId = null) {
+        if (!is_numeric($orderId)) {
+            throw new \Exception('Invalid order id');
+        }
+
+        $collection = $this->getFilteredRelatedFormsCollection($customerId, $orderId);
+        $collection->getSelect()->joinLeft(
+            ['form_records' => 'alekseon_custom_form_record'],
+            'main_table.customer_id = form_records.customer_id AND main_table.entity_id = form_records.order_id',
+            []
+        );
+        $collection->getSelect()->where('form_records.entity_id IS NULL');
+        $sqlResult = $collection->getConnection()->fetchAssoc($collection->getSelect());
+
+        $result = [];
+        foreach ($sqlResult as $item) {
+            if (array_key_exists('alekseon_form_url_key', $item)) {
+                $item['form_url'] = $this->getFormUrlByKey($item['alekseon_form_url_key'], [
+                    'customer_id' => $item['customer_id'],
+                    'order_id' => $item['order_id'],
+                    'order_item_id' => $item['item_id']
+                ]);
+
+            } else {
+                $item['form_url'] = null;
+            }
+            $result[$item['item_id']] = $item;
+        }
+
+        return $result;
+    }
+
+
+    public function getFormUrlByKey ($urlKey, $params) {
+        $url = trim($this->urlFrontBuilder->getBaseUrl(), '/');
+        $url = $url . '/' . $urlKey;
+        $query = [];
+
+        foreach ($params as $key => $value) {
+            $k = urlencode($key);
+            $v = urlencode($value);
+            $query[] = $k . '=' . $v;
+        }
+
+        if (!empty($query)) {
+            $url = $url . '?' . implode('&', $query);
+        }
+        return $url;
+    }
+
+    public function getFormUrlById ($id, $params) {
+        // Not working!
+        return null;
+    }
 }

@@ -1,0 +1,30 @@
+<?php
+    /** @var \Magento\Framework\View\Element\Template $block */
+    $items = $block->getData('items');
+    $i = 1;
+?>
+
+<?php if (is_array($items) && count($items)) : ?>
+<div class="related-forms-data">
+        <?php foreach ($items as $item) : ?>
+        <div class="related-form item">
+        <?php if ($item['form_url']) : ?>
+            <span class="item-name">
+                <?= '<b>' .  $i . '. ' .  $item['name'] . '</b> - '; ?>
+            </span>
+            <span class="item-link">
+                <a href="<?= $item['form_url'] ?>"><?= __('Click to browse to configuration page') ?></a>
+            </span>
+        <?php else : ?>
+            <span class="item-name">
+                <?= '<b>' . $i . '. ' .  $item['name'] . '</b> - '; ?>
+            </span>
+            <span class="item-link missing">
+                <?= __('Item is missing configuration link.') . ' ' . __('Please contact customer service') ?>
+            </span>
+        <?php endif; ?>
+        </div>
+    <?php $i++ ?>
+    <?php endforeach; ?>
+</div>
+<?php endif; ?>
