@@ -11,5 +11,16 @@
                 </arguments>
             </block>
         </referenceBlock>
+
+        <!-- Add form related messages -->
+        <referenceContainer name="before.body.end">
+            <block class="Magento\Framework\View\Element\Template"
+                   name="add_form_messages"
+                   template="Alekseon_WidgetForms::customer/account/messages.phtml">
+                <arguments>
+                    <argument name="forms_helper" xsi:type="object">Alekseon\WidgetForms\Helper\Data</argument>
+                </arguments>
+            </block>
+        </referenceContainer>
     </body>
 </page>

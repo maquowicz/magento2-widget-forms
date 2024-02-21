@@ -302,6 +302,10 @@ class Submit implements HttpPostActionInterface
             $resultJson->setData(
                 $payload
             );
+            if ('new' === $formMode) {
+                $this->customerSession->unsetData('alekseon_form_customer_pending_items');
+            }
+
         } catch (LocalizedException $e) {
             $resultJson->setData(
                 [

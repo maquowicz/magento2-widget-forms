@@ -6,6 +6,7 @@ use Magento\Customer\Model\Session as CustomerSession;
 use Alekseon\CustomFormsBuilder\Model\ResourceModel\FormRecord\CollectionFactory as FormRecordCollectionFactory;
 use Magento\Catalog\Model\ResourceModel\Product\CollectionFactory as ProductCollectionFactory;
 use Magento\Sales\Model\ResourceModel\Order\CollectionFactory as OrderCollectionFactory;
+use Magento\Framework\Message\ManagerInterface as MessageManagerInterface;
 use Magento\Framework\Url as UrlFrontBuilder;
 use Magento\Framework\Url\Encoder as UrlEncoder;
 
@@ -29,6 +30,8 @@ class Data extends AbstractHelper implements ArgumentInterface
 
     protected $urlEncoder;
 
+    protected $messageManager;
+
     protected $urlFrontBuilder;
 
     /** @var \Magento\Framework\View\LayoutInterface  */
@@ -49,6 +52,7 @@ class Data extends AbstractHelper implements ArgumentInterface
         ProductCollectionFactory $productCollectionFactory,
         OrderCollectionFactory $orderCollectionFactory,
         CustomerSession $customerSession,
+        MessageManagerInterface $messageManager,
         UrlFrontBuilder $urlFrontBuilder,
         UrlEncoder $urlEncoder,
         Context $context,
@@ -62,6 +66,7 @@ class Data extends AbstractHelper implements ArgumentInterface
         $this->orderCollectionFactory = $orderCollectionFactory;
 
         $this->customerSession = $customerSession;
+        $this->messageManager = $messageManager;
         $this->urlFrontBuilder = $urlFrontBuilder;
         $this->urlEncoder = $urlEncoder;
         $this->layout = $layout;
@@ -196,6 +201,13 @@ class Data extends AbstractHelper implements ArgumentInterface
             throw new \Exception('Invalid customer id');
         }
         $collection = $this->getFilteredRelatedFormsCollection($customerId);
+
+        $collection->getSelect()->joinLeft(
+            ['form_entity' => 'alekseon_custom_form'],
+            'prd.alekseon_related_form = form_entity.entity_id',
+            ['admin_note']
+        );
+
         $collection->getSelect()->joinLeft(
             ['form_records' => 'alekseon_custom_form_record'],
             'main_table.customer_id = form_records.customer_id AND main_table.entity_id = form_records.order_id',
@@ -203,7 +215,22 @@ class Data extends AbstractHelper implements ArgumentInterface
         );
 
         $collection->getSelect()->where('form_records.entity_id IS NULL');
-        return $collection->getConnection()->fetchAll($collection->getSelect());
+        $sqlResult = $collection->getConnection()->fetchAll($collection->getSelect());
+
+        foreach ($sqlResult as &$item) {
+            if (array_key_exists('alekseon_form_url_key', $item) && !empty($item['alekseon_form_url_key'])) {
+                $item['form_url'] = $this->getFormUrlByKey($item['alekseon_form_url_key'], [
+                    'customer_id' => $item['customer_id'],
+                    'order_id' => $item['order_id'],
+                    'order_item_id' => $item['item_id']
+                ]);
+
+            } else {
+                $item['form_url'] = null;
+            }
+        }
+
+        return $sqlResult;
     }
 
     public function getOrderPendingFormsData ($orderId, $customerId = null) {
@@ -234,7 +261,6 @@ class Data extends AbstractHelper implements ArgumentInterface
             } else {
                 $item['form_url'] = null;
             }
-            $result[$item['item_id']] = $item;
         }
 
         return $sqlResult;
@@ -266,5 +292,33 @@ class Data extends AbstractHelper implements ArgumentInterface
     public function getFormUrlById ($id, $params) {
         // Not working!
         return null;
+    }
+
+    public function printFormMessages () {
+        if ($this->customerSession->isLoggedIn() && $this->customerSession->getCustomerId()) {
+            $pendingItems = $this->customerSession->getData('alekseon_form_customer_pending_items');
+            if ($pendingItems) {
+                $pendingItems = json_decode($pendingItems, true);
+            } else {
+                $pendingItems = $this->getCustomerPendingFormsData($this->customerSession->getCustomerId());
+                $this->customerSession->setData(
+                    'alekseon_form_customer_pending_items',
+                    json_encode($pendingItems)
+                );
+            }
+
+            foreach ($pendingItems as $item) {
+                if (empty($item['form_url'])) continue;
+
+                $this->messageManager->addComplexErrorMessage(
+                    'pending_form_completion',
+                    [
+                        'product_name' => $item['name'],
+                        'form_url' => $item['form_url'],
+                        'form_title' => empty($item['admin_note']) ? __('Link') : $item['admin_note']
+                    ]
+                );
+            }
+        }
     }
 }

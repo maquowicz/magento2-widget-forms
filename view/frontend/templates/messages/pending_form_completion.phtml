@@ -1,0 +1,34 @@
+<?php
+/*
+ * Copyright (c) 2011-2023 PFP Łukasz Maksimowicz
+ * https://www.ipfp.pl
+ * +48 790 790 543
+ *
+ * Need help or want to customize anything?
+ * Drop us a line at our contact page: https://www.ipfp.pl/contact
+ *
+ * All title, including but not limited to copyrights, in and to the software product
+ * and any copies thereof are owned by PFP Łukasz Maksimowicz.
+ * All rights not expressly granted are reserved by PFP Łukasz Maksimowicz.
+ *
+ * @category Module
+ * @package SubscriptionProduct
+ * @author Łukasz Maksimowicz <maxim@ipfp.pl>
+ * @license https://www.ipfp.pl/licenses/magento
+ */
+
+/** @var \Magento\Framework\Escaper $escaper */
+/** @var \Magento\Framework\View\Helper\SecureHtmlRenderer $secureRenderer */
+/** @var \Magento\Framework\View\Element\Template $block */
+
+
+$message = '<span class="message">' . __('There exists ordered item %s, this item requires filling the form <a href="%s">%s</a>') . '</span>';
+?>
+
+<?= $escaper->escapeHtml(
+    sprintf(
+        $message,
+        $block->getData('product_name'),
+        $block->getData('form_url'),
+        $block->getData('form_title')
+    ), ['a', 'span']); ?>
