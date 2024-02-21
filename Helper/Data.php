@@ -224,7 +224,7 @@ class Data extends AbstractHelper implements ArgumentInterface
         $sqlResult = $collection->getConnection()->fetchAll($collection->getSelect());
 
         foreach ($sqlResult as &$item) {
-            if (array_key_exists('alekseon_form_url_key', $item)) {
+            if (array_key_exists('alekseon_form_url_key', $item) && !empty($item['alekseon_form_url_key'])) {
                 $item['form_url'] = $this->getFormUrlByKey($item['alekseon_form_url_key'], [
                     'customer_id' => $item['customer_id'],
                     'order_id' => $item['order_id'],
@@ -242,20 +242,25 @@ class Data extends AbstractHelper implements ArgumentInterface
 
 
     public function getFormUrlByKey ($urlKey, $params) {
-        $url = trim($this->urlFrontBuilder->getBaseUrl(), '/');
-        $url = $url . '/' . $urlKey;
-        $query = [];
+        $urlKey = trim((string) $urlKey);
+        if (!empty($urlKey)) {
+            $url = trim($this->urlFrontBuilder->getBaseUrl(), '/');
+            $url = $url . '/' . $urlKey;
+            $query = [];
 
-        foreach ($params as $key => $value) {
-            $k = urlencode($key);
-            $v = urlencode($value);
-            $query[] = $k . '=' . $v;
+            foreach ($params as $key => $value) {
+                $k = urlencode($key);
+                $v = urlencode($value);
+                $query[] = $k . '=' . $v;
+            }
+
+            if (!empty($query)) {
+                $url = $url . '?' . implode('&', $query);
+            }
+            return $url;
         }
 
-        if (!empty($query)) {
-            $url = $url . '?' . implode('&', $query);
-        }
-        return $url;
+        return null;
     }
 
     public function getFormUrlById ($id, $params) {
