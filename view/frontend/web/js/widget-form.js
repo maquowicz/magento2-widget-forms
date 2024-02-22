@@ -4,8 +4,9 @@
  */
 define([
     'jquery',
+    'Magento_Customer/js/customer-data',
     'Magento_Ui/js/modal/alert'
-], function ($, alert) {
+], function ($, customerData, alert) {
     'use strict';
 
     $.widget('mage.alekseonWidgetForm', {
@@ -22,6 +23,7 @@ define([
         },
 
         cookieStorage : {},
+        messages : [],
 
         _create: function () {
             this.options.form = document.getElementById(this.options.formId);
@@ -59,6 +61,8 @@ define([
                             break;
                     }
                 });
+            }).catch((reason) => {
+                this.printMessages();
             });
         },
 
@@ -82,84 +86,120 @@ define([
                 if (response.ok) {
                     return response.json();
                 }
-                window.alert('Something went wrong');
+                this.disableFormControls();
+                this.addMessage('error', wconf.message_templates['general_error']);
+
+                return Promise.reject();
+
             }).then ((data) => {
-                console.log(data);
                 if (!data.error) {
                     if ('edit' === wconf.form_mode) {
-                        let fields = data.data || {};
-                        Object.keys(data.data).forEach((key) => {
-                            let name = key;
-                            if (Array.isArray(fields[key])) {
-                                name = name + '[]';
+                        this.fillFromData(data.data);
+                    }
+                    return data;
+                } else {
+                    let r_login = false, m_order = false;
+                    if (!data.is_logged_in && (!data.allow_guest_submit || data.guest_submit_invalidated)) {
+                        r_login = true;
+                    }
+                    if (data.missing_params.length) {
+                        data.missing_params.every((param) => {
+                            if ('order_id' === param || 'order_item_id' === param) {
+                                m_order = true;
+                                return false;
                             }
-                            let field = document.querySelector('[name="' + name + '"]');
-                            let event = new CustomEvent('change');
-                            if (field) {
-                                let tag = field.tagName.toLowerCase();
-                                if ('textarea' === tag) {
-                                    field.value = fields[key];
-                                    field.dispatchEvent(event);
-                                }
-                                if ('input' === tag) {
-                                    let type = field.getAttribute('type');
-                                    if ('file' === type) {
-                                       if (fields[key]) {
-                                           let w = document.createElement('div');
-                                           let a = document.createElement('a');
-                                           a.setAttribute('href', fields[key]);
-                                           a.innerText = 'link';
-                                           w.appendChild(a);
-                                           field.parentElement.appendChild(w);
-                                       }
-
-                                    }
-                                    if ('text' === type) {
-                                        field.value = fields[key];
-                                        field.dispatchEvent(event);
-                                    }
-                                    if ('date' === type) {
-                                        field.value = fields[key].split(' ')[0];
-                                        field.dispatchEvent(event);
-                                    }
-                                    if ('radio' === type) {
-                                        let radios = document.querySelectorAll('[name="' + key + '"]');
-                                        Array.from(radios).every((radio) => {
-                                            if (radio.value === fields[key]) {
-                                                radio.checked = true;
-                                                radio.dispatchEvent(event);
-                                                return false;
-                                            }
-                                            return true;
-                                        });
-                                    }
-                                }
-                                if ('select' === tag) {
-                                    Array.from(field.options).forEach((item) => {
-                                        if (Array.isArray(fields[key])) {
-                                            fields[key].forEach((value) => {
-                                                if (item.value === value) {
-                                                    item.selected = true;
-                                                }
-                                            });
-                                        } else {
-                                            field.value = fields[key];
-                                        }
-                                        field.dispatchEvent(event);
-                                    });
-                                }
-                            }
+                            return true;
                         });
                     }
-                } else {
-                    //error
-                    window.alert('Error');
-                    console.log(data.messages);
+                    if (r_login || m_order) {
+                        if (r_login) {
+                            this.addMessage('warning', wconf.message_templates['expects_login']);
+                        }
+                        if (m_order) {
+                            this.addMessage('warning', wconf.message_templates['expects_order']);
+                        }
+                    } else {
+                        this.addMessage('error', wconf.message_templates['general_error']);
+                    }
+                    this.disableFormControls();
+                    return Promise.reject();
                 }
-                return data;
-            });
 
+            });
             return result;
+        },
+
+        disableFormControls : function () {
+            this.options.form.querySelectorAll('input, textarea, select, button').forEach((elem) => {
+                elem.disabled = true;
+            });
+            return this;
+        },
+
+        fillFromData : function (data) {
+            let fields = data || {};
+            Object.keys(fields).forEach((key) => {
+                let name = key;
+                if (Array.isArray(fields[key])) {
+                    name = name + '[]';
+                }
+                let field = document.querySelector('[name="' + name + '"]');
+                let event = new CustomEvent('change');
+                if (field) {
+                    let tag = field.tagName.toLowerCase();
+                    if ('textarea' === tag) {
+                        field.value = fields[key];
+                        field.dispatchEvent(event);
+                    }
+                    if ('input' === tag) {
+                        let type = field.getAttribute('type');
+                        if ('file' === type) {
+                            if (fields[key]) {
+                                let w = document.createElement('div');
+                                let a = document.createElement('a');
+                                a.setAttribute('href', fields[key]);
+                                a.innerText = 'link';
+                                w.appendChild(a);
+                                field.parentElement.appendChild(w);
+                            }
+
+                        }
+                        if ('text' === type) {
+                            field.value = fields[key];
+                            field.dispatchEvent(event);
+                        }
+                        if ('date' === type) {
+                            field.value = fields[key].split(' ')[0];
+                            field.dispatchEvent(event);
+                        }
+                        if ('radio' === type) {
+                            let radios = document.querySelectorAll('[name="' + key + '"]');
+                            Array.from(radios).every((radio) => {
+                                if (radio.value === fields[key]) {
+                                    radio.checked = true;
+                                    radio.dispatchEvent(event);
+                                    return false;
+                                }
+                                return true;
+                            });
+                        }
+                    }
+                    if ('select' === tag) {
+                        Array.from(field.options).forEach((item) => {
+                            if (Array.isArray(fields[key])) {
+                                fields[key].forEach((value) => {
+                                    if (item.value === value) {
+                                        item.selected = true;
+                                    }
+                                });
+                            } else {
+                                field.value = fields[key];
+                            }
+                            field.dispatchEvent(event);
+                        });
+                    }
+                }
+            });
         },
 
         loadFormStorage : function () {
@@ -193,7 +233,7 @@ define([
                         control.dispatchEvent(changeEvent);
                     });
                 });
-                });
+            });
 
         },
 
@@ -356,6 +396,26 @@ define([
                 });
             }
             return params;
+        },
+
+        addMessage : function (type, text) {
+            this.messages.push({type : type, text : text});
+            return this;
+        },
+
+        printMessages : function (clear) {
+            let m = customerData.get('messages')() || {};
+            let a = m.messages || [];
+
+            this.messages.forEach((item) => {
+               a.push(item);
+            });
+            m.messages = a;
+            customerData.set('messages', m);
+
+            if (false !== clear) {
+                this.messages = [];
+            }
         },
 
         openTab: function (form, tabIndex) {

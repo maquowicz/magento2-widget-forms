@@ -21,14 +21,13 @@
 /** @var \Magento\Framework\View\Helper\SecureHtmlRenderer $secureRenderer */
 /** @var \Magento\Framework\View\Element\Template $block */
 
-
-$message = '<span class="message">' . __('There exists ordered item %s, this item requires filling the form <a href="%s">%s</a>') . '</span>';
+$message = '<span class="pending-form">' . __('Ordered product <span class="item-name">%s</span> requires filling <span class="form-name">%s</span> form. Click <a href="%s">here</a> to complete.') . '</span>';
 ?>
 
 <?= $escaper->escapeHtml(
     sprintf(
         $message,
         $block->getData('product_name'),
-        $block->getData('form_url'),
-        $block->getData('form_title')
+        $block->getData('form_title'),
+        $block->getData('form_url')
     ), ['a', 'span']); ?>

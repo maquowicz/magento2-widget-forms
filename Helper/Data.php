@@ -148,12 +148,11 @@ class Data extends AbstractHelper implements ArgumentInterface
             'alekseon_form_url_key'
         ];
 
+        // Require both form attributes to be present
         $collection
             ->addAttributeToSelect($attributeCodes, 'left')
-            ->addFieldToFilter([
-                ['attribute' => 'alekseon_related_form', 'notnull' => true],
-                ['attribute' => 'alekseon_form_url_key', 'notnull' => true]
-            ]);
+            ->addFieldToFilter('alekseon_related_form', ['notnull' => true])
+            ->addFieldToFilter('alekseon_form_url_key', ['notnull' => true]);
 
         $o_collection = $this->orderCollectionFactory->create();
         $o_collection->getSelect()->reset(\Magento\Framework\DB\Select::COLUMNS);
@@ -220,7 +219,6 @@ class Data extends AbstractHelper implements ArgumentInterface
         foreach ($sqlResult as &$item) {
             if (array_key_exists('alekseon_form_url_key', $item) && !empty($item['alekseon_form_url_key'])) {
                 $item['form_url'] = $this->getFormUrlByKey($item['alekseon_form_url_key'], [
-                    'customer_id' => $item['customer_id'],
                     'order_id' => $item['order_id'],
                     'order_item_id' => $item['item_id']
                 ]);
@@ -239,21 +237,25 @@ class Data extends AbstractHelper implements ArgumentInterface
         }
 
         $collection = $this->getFilteredRelatedFormsCollection($customerId, $orderId);
+
+        $collection->getSelect()->joinLeft(
+            ['form_entity' => 'alekseon_custom_form'],
+            'prd.alekseon_related_form = form_entity.entity_id',
+            ['admin_note']
+        );
+
         $collection->getSelect()->joinLeft(
             ['form_records' => 'alekseon_custom_form_record'],
             'main_table.customer_id = form_records.customer_id AND main_table.entity_id = form_records.order_id',
             []
         );
         $collection->getSelect()->where('form_records.entity_id IS NULL');
-        ob_start();
-        echo $collection->getSelect();
-        $t = ob_get_clean();
+
         $sqlResult = $collection->getConnection()->fetchAll($collection->getSelect());
 
         foreach ($sqlResult as &$item) {
             if (array_key_exists('alekseon_form_url_key', $item) && !empty($item['alekseon_form_url_key'])) {
                 $item['form_url'] = $this->getFormUrlByKey($item['alekseon_form_url_key'], [
-                    'customer_id' => $item['customer_id'],
                     'order_id' => $item['order_id'],
                     'order_item_id' => $item['item_id']
                 ]);

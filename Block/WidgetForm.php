@@ -338,6 +338,12 @@ class WidgetForm extends \Magento\Framework\View\Element\Template
         $data['backend_form_id'] = (int) $this->getForm()->getId();
         $data['form_mode'] = $this->getData('form_mode');
 
+        $data['message_templates'] = [
+            'general_error' => __('Something went wrong.'),
+            'expects_login' => __('This form requires the user to be logged in.'),
+            'expects_order' => __('This form must be associated with an order.')
+        ];
+
         $data['load_form_data_url'] = $this->_urlBuilder->getUrl(
             'Alekseon_WidgetForms/form/load',
             ['_secure' => true]
