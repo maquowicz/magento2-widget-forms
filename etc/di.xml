@@ -9,4 +9,13 @@
     <type name="Alekseon\CustomFormsBuilder\Model\FormRecord\Attribute">
         <plugin name="Alekseon_WidgetForms::NewsletterEmailValidatorPlugin" type="Alekseon\WidgetForms\Plugin\NewsletterEmailValidatorPlugin" sortOrder="100" />
     </type>
+
+    <!-- DVCR - Custom notification emails sender logic -->
+    <type name="Alekseon\CustomFormsEmailNotification\Model\Email\CustomerConfirmation">
+        <plugin name="Alekseon_WidgetForms::CustomerConfirmationEmailPlugin"
+                type="Alekseon\WidgetForms\Plugin\CustomerConfirmationEmailPlugin"
+                sortOrder="100"
+                disabled="false"
+        />
+    </type>
 </config>

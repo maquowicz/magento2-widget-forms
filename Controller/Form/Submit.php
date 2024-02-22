@@ -243,6 +243,8 @@ class Submit implements HttpPostActionInterface
             } else {
                 $formRecord = $this->formRecordFactory->create();
                 $formRecord->setData('customer_id', $this->customerSession->getCustomerId());
+                $formRecord->setData('customer_email', $this->customerSession->getCustomer()->getEmail());
+
                 if (in_array('order_id', $requiredParams)) {
                     $formRecord->setData('order_id', $additional['order_id']);
                 }

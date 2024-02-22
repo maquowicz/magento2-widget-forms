@@ -100,6 +100,22 @@ class AdditionalWidgetFormsAttributesPatch implements DataPatchInterface, PatchR
                 'note' => 'Required params to be sent to form submit or load controller. Params like order_id or order_item_id presume that customer would be logged in'
             ]
         );
+
+        $eavSetup->createOrUpdateAttribute(
+            'allow_form_edit_for_order_statuses',
+            [
+                'frontend_input' => 'multiselect',
+                'frontend_label' => 'Allow Form Edit For Following Order Statuses',
+                'backend_type' => 'varchar',
+                'source_model' => 'Alekseon\WidgetForms\Model\Attribute\Source\OrderStatuses',
+                'visible_in_grid' => false,
+                'is_required' => false,
+                'sort_order' => 3,
+                'group_code' => 'widget_form_attribute',
+                'scope' => Scopes::SCOPE_GLOBAL,
+                'note' => 'Order statuses for which form edition is allowed (taken into account for forms associated with orders)'
+            ]
+        );
     }
 
     /**

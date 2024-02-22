@@ -178,12 +178,18 @@ class Load implements \Magento\Framework\App\Action\HttpPostActionInterface
             }
 
             if (in_array('order_id', $required) ) {
+                if ($result['allow_guest_submit']) {
+                    $result['guest_submit_invalidated'] = true;
+                }
                 if (!$result['is_logged_in']) {
-                    $result['require_login'] = $result['guest_submit_invalidated'] = true;
+                    $result['require_login'] = true;
                 }
             }
 
             if (in_array('order_item_id', $required)) {
+                if ($result['allow_guest_submit']) {
+                    $result['guest_submit_invalidated'] = true;
+                }
                 if (!$result['is_logged_in']) {
                     $result['require_login'] = $result['guest_submit_invalidated'] = true;
                 }
@@ -220,7 +226,6 @@ class Load implements \Magento\Framework\App\Action\HttpPostActionInterface
                             $result['messages'][] = ['type' => 'error', 'text' => __('Access to object denied.')];
                             $valid = false;
                         }
-
                     }
                 } else if (in_array('order_id', $required)) {
                     $orderCollection = $this->orderCollectionFactory->create();
@@ -256,6 +261,7 @@ class Load implements \Magento\Framework\App\Action\HttpPostActionInterface
                     $result['messages'][] = ['type' => 'error', 'text' => __('Object association mismatch.')];
                     $valid = false;
                 }
+
                 if ($orderItem && (int)$orderItem->getId() !== (int) $formData->getData('order_item_id')) {
                     $result['messages'][] = ['type' => 'error', 'text' => __('Object association mismatch.')];
                     $valid = false;

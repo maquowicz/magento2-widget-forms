@@ -12,4 +12,7 @@
     <event name="alekseon_custom_form_record_attibute_save_before">
         <observer name="Alekseon_WidgetForms::FormRecordAttributeSaveAfter" instance="Alekseon\WidgetForms\Observer\FormRecordAttributeSaveAfter" />
     </event>
+    <event name="checkout_submit_all_after">
+        <observer name="alekseon_widget_forms_clear_session_after_order_submit" instance="Alekseon\WidgetForms\Observer\ClearSessionAfterOrderSubmit" />
+    </event>
 </config>

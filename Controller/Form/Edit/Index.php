@@ -27,6 +27,7 @@ use Magento\Sales\Model\ResourceModel\Order\Item\CollectionFactory as OrderItemC
 use Magento\Framework\View\LayoutInterface;
 
 use Magento\Framework\App\RequestInterface;
+use Magento\Framework\Message\ManagerInterface as MessageManagerInterface;
 use Magento\Framework\Controller\ResultFactory;
 use Magento\Framework\UrlInterface;
 use Magento\Framework\Data\Form\FormKey;
@@ -47,6 +48,8 @@ class Index implements \Magento\Framework\App\Action\HttpGetActionInterface
 
     /** @var RequestInterface  */
     protected $request;
+
+    protected $messageManager;
 
     /** @var ResultFactory  */
     protected $resultFactory;
@@ -73,6 +76,7 @@ class Index implements \Magento\Framework\App\Action\HttpGetActionInterface
         OrderItemCollectionFactory $orderItemCollectionFactory,
         LayoutInterface $layout,
         RequestInterface $request,
+        MessageManagerInterface $messageManager,
         ResultFactory $resultFactory,
         UrlInterface $urlBuilder,
         Formkey $formkey,
@@ -87,6 +91,7 @@ class Index implements \Magento\Framework\App\Action\HttpGetActionInterface
         $this->layout = $layout;
 
         $this->request = $request;
+        $this->messageManager = $messageManager;
         $this->resultFactory = $resultFactory;
         $this->urlBuilder = $urlBuilder;
         $this->formkey = $formkey;
@@ -99,16 +104,139 @@ class Index implements \Magento\Framework\App\Action\HttpGetActionInterface
 
         $resultPage = $this->resultFactory->create(ResultFactory::TYPE_PAGE);
 
+        $referrer = $this->urlBuilder->getUrl('*/*/*', ['_current' => true, '_use_rewrite' => true]);
+
+        // Customer must be logged in
+        if (!$this->customerSession->isLoggedIn()) {
+            $this->messageManager->addNoticeMessage(__('Please log in to complete your request.'));
+
+            $resultRedirect = $this->resultFactory->create(ResultFactory::TYPE_REDIRECT);
+            $resultRedirect->setUrl(
+                $this->urlBuilder->getUrl('customer/account/login', [
+                    '_secure' => true,
+                    'referer' => base64_encode($referrer)
+                ])
+            );
+
+            return $resultRedirect;
+        }
+
+        // Params required in any case
+        $formId = $this->request->getParam('form_id');
+        $recordId = $this->request->getParam('record_id');
+
+        if (!is_numeric($formId)) {
+            $this->messageManager->addErrorMessage(__('Invalid request.'));
+            $resultRedirect = $this->resultFactory->create(ResultFactory::TYPE_REDIRECT);
+            $resultRedirect->setUrl(
+                $this->urlBuilder->getBaseUrl(),
+                ['_secure' => true]
+            );
+
+            return $resultRedirect;
+        }
+
+        if (!is_numeric($recordId)) {
+            $this->messageManager->addErrorMessage(__('Invalid request.'));
+            $resultRedirect = $this->resultFactory->create(ResultFactory::TYPE_REDIRECT);
+            $resultRedirect->setUrl(
+                $this->urlBuilder->getBaseUrl(),
+                ['_secure' => true]
+            );
+            return $resultRedirect;
+        }
+
+        $form = $record = null;
+
+        try {
+            $form   = $this->formRepository->getById($formId);
+        } catch (\Throwable $e) {
+            // Form not found
+            $this->messageManager->addErrorMessage(__('Invalid request.'));
+            $resultRedirect = $this->resultFactory->create(ResultFactory::TYPE_REDIRECT);
+            $resultRedirect->setUrl(
+                $this->urlBuilder->getBaseUrl(),
+                ['_secure' => true]
+            );
+            return $resultRedirect;
+        }
+
+
+
+        try {
+            $record = $form->getRecordById($recordId);
+        } catch (\Throwable $e) {
+            $this->messageManager->addErrorMessage(__('Invalid request.'));
+            $resultRedirect = $this->resultFactory->create(ResultFactory::TYPE_REDIRECT);
+            $resultRedirect->setUrl(
+                $this->urlBuilder->getBaseUrl(),
+                ['_secure' => true]
+            );
+            return $resultRedirect;
+        }
+
+        $customerId = (int) $this->customerSession->getCustomerId();
+
+        // Record does not have proper customer_id
+        if (!$customerId || (int) $record->getData('customer_id') !== $customerId) {
+            $this->messageManager->addErrorMessage(__('Invalid request.'));
+            $resultRedirect = $this->resultFactory->create(ResultFactory::TYPE_REDIRECT);
+            $resultRedirect->setUrl(
+                $this->urlBuilder->getBaseUrl(),
+                ['_secure' => true]
+            );
+            return $resultRedirect;
+        }
+
+        $requiredRecordParams = (array) $form->getData('required_record_params');
+
+        if ((in_array('order_id', $requiredRecordParams) && !is_numeric($record->getData('order_id'))) ||
+            (in_array('order_item_id', $requiredRecordParams) && !is_numeric($record->getData('order_item_id')))
+        ) {
+            $this->messageManager->addErrorMessage(__('Invalid request.'));
+            $resultRedirect = $this->resultFactory->create(ResultFactory::TYPE_REDIRECT);
+            $resultRedirect->setUrl(
+                $this->urlBuilder->getBaseUrl(),
+                ['_secure' => true]
+            );
+            return $resultRedirect;
+        }
+
+        $order = $orderItem = null;
+
+        if (in_array('order_id', $requiredRecordParams) || in_array('order_item_id', $requiredRecordParams)) {
+            $collection = $this->orderCollectionFactory->create();
+            $collection->addFieldToFilter('customer_id', ['eq' => $customerId]);
+
+            if (in_array('order_id', $requiredRecordParams)) {
+                $collection->addFieldToFilter('entity_id', ['eq' => $record->getData('order_id')]);
+            }
+
+            if (in_array('order_item_id', $requiredRecordParams)) {
+                $collection->getSelect()->join(
+                    ['o_item' => 'sales_order_item'],
+                    'main_table.entity_id = o_item.order_id',
+                    []
+                );
+            }
+
+            if (!$collection->getSize()) {
+                $this->messageManager->addErrorMessage(__('Invalid request.'));
+                $resultRedirect = $this->resultFactory->create(ResultFactory::TYPE_REDIRECT);
+                $resultRedirect->setUrl(
+                    $this->urlBuilder->getBaseUrl(),
+                    ['_secure' => true]
+                );
+                return $resultRedirect;
+            }
+        }
+
         /** @var \Magento\Framework\View\Element\Template $container */
         $block = $this->layout->getBlock('alekseon_form');
+
         $block->setData('form_id', $this->request->getParam('form_id'));
         $block->setData('form_mode', 'edit');
 
-        /*
-        $container->addChild('alekseon_form', \Alekseon\WidgetForms\Block\WidgetForm::class, [
-            'form_id' => $this->request->getParam('form_id'),
-            'form_mode' => 'edit'
-        ]); */
 
         return $resultPage;
 
