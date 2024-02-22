@@ -92,30 +92,20 @@ define([
                 return Promise.reject();
 
             }).then ((data) => {
+                if (data.debug) {
+                    console.log(data);
+                }
                 if (!data.error) {
                     if ('edit' === wconf.form_mode) {
                         this.fillFromData(data.data);
                     }
                     return data;
                 } else {
-                    let r_login = false, m_order = false;
-                    if (!data.is_logged_in && (!data.allow_guest_submit || data.guest_submit_invalidated)) {
-                        r_login = true;
-                    }
-                    if (data.missing_params.length) {
-                        data.missing_params.every((param) => {
-                            if ('order_id' === param || 'order_item_id' === param) {
-                                m_order = true;
-                                return false;
-                            }
-                            return true;
-                        });
-                    }
-                    if (r_login || m_order) {
-                        if (r_login) {
+                    if (data.require_login || data.missing_association) {
+                        if (data.require_login) {
                             this.addMessage('warning', wconf.message_templates['expects_login']);
                         }
-                        if (m_order) {
+                        if (data.missing_association) {
                             this.addMessage('warning', wconf.message_templates['expects_order']);
                         }
                     } else {

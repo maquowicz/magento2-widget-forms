@@ -38,6 +38,8 @@ use Magento\Framework\Exception\LocalizedException;
 
 class Load implements \Magento\Framework\App\Action\HttpPostActionInterface
 {
+    const DEBUG_FLAG = true;
+
     protected $formRepository;
 
     protected $orderCollectionFactory;
@@ -111,85 +113,83 @@ class Load implements \Magento\Framework\App\Action\HttpPostActionInterface
             'allow_guest_submit' => null,
             'guest_submit_invalidated' => false,
             'missing_params' => [],
+            'missing_association' => false,
             'require_login' => false,
             'form_data' => null,
             'messages' => [],
-            'redirect_url' => null
+            'redirect_url' => null,
+            'debug' => self::DEBUG_FLAG
         ];
 
         try {
             if (!$this->formkeyValidator->validate($this->request)) {
-                throw new LocalizedException(__('Your session has expired.'));
+                $result['require_login'] = true;
+                throw new \Exception();
             }
 
             $result['is_logged_in'] = $this->customerSession->isLoggedIn();
 
-            if (!($formMode = $this->request->getParam('form_mode')) || !in_array($formMode, ['new', 'edit'])) {
-                $result['missing_params'][] = 'form_mode';
-                throw new LocalizedException(__('Missing parameter.'));
-            }
-
-
-            if ('edit' === $formMode && !$result['is_logged_in']) {
-                $result['require_login'] = true;
-                throw new LocalizedException(__('Please log in.'));
-            }
-
-            if (!($formId = $this->request->getParam('form_id'))) {
+            if (!($formId = $this->request->getParam('form_id')) || !is_numeric($formId)) {
                 $result['missing_params'][] = 'form_id';
-                throw new LocalizedException(__('Missing parameter.'));
-            }
-
-            $supplied = json_decode($this->request->getParam('form_params'), true);
-
-            $recordId = array_key_exists('record_id', $supplied) ? $supplied['record_id'] : null;
-            if ('edit' === $formMode && !is_numeric($recordId)) {
-                $result['missing_params'][] = 'record_id';
-                throw new LocalizedException(__('Missing parameter.'));
+                throw new \Exception();
             }
 
             try {
                 $form = $this->formRepository->getById($formId);
             } catch (\Throwable $e) {
-                throw new LocalizedException(__());
+                throw new \Exception();
             }
 
             $required = $form->getData('required_record_params') ?? [];
+            $supplied = json_decode($this->request->getParam('form_params'), true);
+
+            if (in_array('order_id', $required) &&
+                (!array_key_exists('order_id', $supplied) || !is_numeric($supplied['order_id']))
+            ) {
+                $result['missing_params'][] = 'order_id';
+                $result['missing_association'] = true;
+            }
+
+            if (in_array('order_item_id', $required) &&
+                (!array_key_exists('order_id', $supplied) || !is_numeric($supplied['order_item_id']))
+            ) {
+                $result['missing_params'][] = 'order_item_id';
+                $result['missing_association'] = true;
+            }
+
+            if (!($formMode = $this->request->getParam('form_mode')) || !in_array($formMode, ['new', 'edit'])) {
+                $result['missing_params'][] = 'form_mode';
+            }
+
+
+            if ('edit' === $formMode && !$result['is_logged_in']) {
+                $result['require_login'] = true;
+            }
+
             $result['allow_guest_submit'] = (bool) $form->getData('allow_guest_submit');
 
             if (!$result['allow_guest_submit'] && !$result['is_logged_in']) {
                 $result['require_login'] = true;
-                throw new LocalizedException(__('Please log in.'));
             }
 
-
-            $valid = true;
+            $recordId = array_key_exists('record_id', $supplied) ? $supplied['record_id'] : null;
+            if ('edit' === $formMode && !is_numeric($recordId)) {
+                $result['missing_params'][] = 'record_id';
+            }
 
             if (in_array('order_id', $required) ) {
                 if (!$result['is_logged_in']) {
-                    $result['guest_submit_invalidated'] = true;
-                    $result['messages'][] = 'Please log in.';
-                    $valid = false;
-                } else if (!array_key_exists('order_id', $supplied) || !is_numeric($supplied['order_id'])) {
-                    $result['messages'][] = 'Missing parameter.';
-
-                    $result['missing_params'][] = 'order_id';
-                    $valid = false;
+                    $result['require_login'] = $result['guest_submit_invalidated'] = true;
                 }
             }
 
             if (in_array('order_item_id', $required)) {
                 if (!$result['is_logged_in']) {
-                    $result['guest_submit_invalidated'] = true;
-                    $result['messages'][] = 'Please log in.';
-                    $valid = false;
-                } else if (!array_key_exists('order_item_id', $supplied) || !is_numeric($supplied['order_item_id'])) {
-                    $result['messages'][] = 'Missing parameter';
-                    $result['missing_params'][] = 'order_item_id';
-                    $valid = false;
+                    $result['require_login'] = $result['guest_submit_invalidated'] = true;
                 }
             }
 
+            $valid = !$result['require_login'] && !$result['missing_association'] && empty($result['missing_params']);
             $order = $orderItem = null;
 
             if ($valid) {
@@ -199,7 +199,7 @@ class Load implements \Magento\Framework\App\Action\HttpPostActionInterface
                         ->addFieldToFilter('item_id', ['eq' => $supplied['order_item_id']]);
 
                     if (!$orderItemCollection->getSize()) {
-                        $result['messages'][] = 'Cannot locate order_item';
+                        $result['messages'][] = ['type' => 'error', 'text' => 'Cannot locate object.'];
                         $valid = false;
                     } else {
                         /** @var \Magento\Sales\Model\Order\Item $orderItem */
@@ -207,17 +207,17 @@ class Load implements \Magento\Framework\App\Action\HttpPostActionInterface
                         $order = $orderItem->getOrder();
 
                         if  (!$order || !is_numeric($order->getId())) {
-                            $result['messages'][] = 'Cannot locate order';
+                            $result['messages'][] = ['type' => 'error', 'text' => 'Cannot locate object.'];
                             $valid = false;
                         }
 
                         if (in_array('order_id', $required) && (int)$supplied['order_id'] !== (int)$order->getId()) {
-                            $result['messages'][] = 'Order/Item mismatch';
+                            $result['messages'][] = ['type' => 'error', 'text' => __('Object association mismatch.')];
                             $valid = false;
                         }
 
                         if ((int)$this->customerSession->getCustomerId() !== (int) $order->getCustomerId()) {
-                            $result['messages'][] = 'Access to object denied (order)';
+                            $result['messages'][] = ['type' => 'error', 'text' => __('Access to object denied.')];
                             $valid = false;
                         }
 
@@ -229,12 +229,12 @@ class Load implements \Magento\Framework\App\Action\HttpPostActionInterface
                         ->addFieldToFilter('customer_id', ['eq' => $this->customerSession->getCustomerId()]);
 
                     if (!$orderCollection->getSize()) {
-                        $result['messages'][] = 'Cannot locate order.';
+                        $result['messages'][] = ['type' => 'error', 'text' => __('Cannot locate object.')];
                         $valid = false;
                     } else {
                         $order = $orderCollection->getFirstItem();
                         if ((int) $this->customerSession->getCustomerId() !== (int) $order->getCustomerId()) {
-                            $result['messages'][] = 'Access to object denied (order)';
+                            $result['messages'][] = ['type' => 'error', 'text' => __('Access to object denied.')];
                             $valid = false;
                         }
                     }
@@ -246,18 +246,18 @@ class Load implements \Magento\Framework\App\Action\HttpPostActionInterface
                     /** @var \Alekseon\CustomFormsBuilder\Model\FormRecord $formData */
                     $formData = $form->getRecordById($recordId);
                 } catch (\Throwable $e) {
-                    $result['messages'][] = 'Cannot locate object (record)';
+                    $result['messages'][] = ['type' => 'error', 'text' => __('Cannot locate object.')];
                 }
                 if ((int)$this->customerSession->getCustomerId() !== (int) $formData->getData('customer_id')) {
-                    $result['messages'][] = 'Access to object denied (record)';
+                    $result['messages'][] = ['type' => 'error', 'text' => __('Access to object denied.')];
                     $valid = false;
                 }
                 if ($order && (int)$order->getId() !== (int)$formData->getData('order_id')) {
-                    $result['messages'][] = 'Order/Record mismatch';
+                    $result['messages'][] = ['type' => 'error', 'text' => __('Object association mismatch.')];
                     $valid = false;
                 }
                 if ($orderItem && (int)$orderItem->getId() !== (int) $formData->getData('order_item_id')) {
-                    $result['messages'][] = 'Item/Record mismatch';
+                    $result['messages'][] = ['type' => 'error', 'text' => __('Object association mismatch.')];
                     $valid = false;
                 }
 
@@ -293,11 +293,10 @@ class Load implements \Magento\Framework\App\Action\HttpPostActionInterface
 
             }
 
-
             $result['error'] = !$valid;
 
         } catch (\Throwable $e) {
-            $message = 'Something went wrong';
+            $message = 'Something went wrong.';
             if ($e instanceof LocalizedException && strlen(trim($e->getMessage()))) {
                 $message = $e->getMessage();
             }
@@ -305,7 +304,9 @@ class Load implements \Magento\Framework\App\Action\HttpPostActionInterface
             $result['messages'][] = ['type' => 'error', 'text' => $message];
 
         }
-
+        if (!self::DEBUG_FLAG) {
+            unset($result['missing_params']);
+        }
         $resultJson = $this->resultFactory->create(ResultFactory::TYPE_JSON);
         $resultJson->setData($result);
 
