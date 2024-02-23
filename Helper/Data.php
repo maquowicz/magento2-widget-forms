@@ -298,14 +298,20 @@ class Data extends AbstractHelper implements ArgumentInterface
 
     public function printFormMessages () {
         if ($this->customerSession->isLoggedIn() && $this->customerSession->getCustomerId()) {
-            $pendingItems = $this->customerSession->getData('alekseon_form_customer_pending_items');
-            if ($pendingItems) {
-                $pendingItems = json_decode($pendingItems, true);
+            $data = $this->customerSession->getData('alekseon_form_customer_pending_items');
+            $pendingItems = [];
+            // There is some data, and it's less than 15 minutes old
+            // (we need this as we cannot for example destroy frontend session after order placed from admin)
+            if ($data && ($data = json_decode($data, true)) && ($data['timestamp'] + 15*60) < time()) {
+                $pendingItems = $data['items'];
             } else {
+                // Unset session data
+                $this->customerSession->unsetData('alekseon_form_customer_pending_items');
+                // Build new one
                 $pendingItems = $this->getCustomerPendingFormsData($this->customerSession->getCustomerId());
                 $this->customerSession->setData(
                     'alekseon_form_customer_pending_items',
-                    json_encode($pendingItems)
+                    json_encode(['items' => $pendingItems, 'timestamp' => time()])
                 );
             }
 

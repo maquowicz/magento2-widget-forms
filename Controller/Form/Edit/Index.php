@@ -104,11 +104,13 @@ class Index implements \Magento\Framework\App\Action\HttpGetActionInterface
 
         $resultPage = $this->resultFactory->create(ResultFactory::TYPE_PAGE);
 
-        $referrer = $this->urlBuilder->getUrl('*/*/*', ['_current' => true, '_use_rewrite' => true]);
+
 
         // Customer must be logged in
         if (!$this->customerSession->isLoggedIn()) {
             $this->messageManager->addNoticeMessage(__('Please log in to complete your request.'));
+
+            $referrer = $this->urlBuilder->getUrl('*/*/*', ['_current' => true, '_use_rewrite' => true]);
 
             $resultRedirect = $this->resultFactory->create(ResultFactory::TYPE_REDIRECT);
             $resultRedirect->setUrl(
@@ -129,8 +131,7 @@ class Index implements \Magento\Framework\App\Action\HttpGetActionInterface
             $this->messageManager->addErrorMessage(__('Invalid request.'));
             $resultRedirect = $this->resultFactory->create(ResultFactory::TYPE_REDIRECT);
             $resultRedirect->setUrl(
-                $this->urlBuilder->getBaseUrl(),
-                ['_secure' => true]
+                $this->urlBuilder->getBaseUrl(['_secure' => true])
             );
 
             return $resultRedirect;
@@ -140,13 +141,10 @@ class Index implements \Magento\Framework\App\Action\HttpGetActionInterface
             $this->messageManager->addErrorMessage(__('Invalid request.'));
             $resultRedirect = $this->resultFactory->create(ResultFactory::TYPE_REDIRECT);
             $resultRedirect->setUrl(
-                $this->urlBuilder->getBaseUrl(),
-                ['_secure' => true]
+                $this->urlBuilder->getBaseUrl(['_secure' => true])
             );
             return $resultRedirect;
         }
-
-        $form = $record = null;
 
         try {
             $form   = $this->formRepository->getById($formId);
@@ -155,35 +153,31 @@ class Index implements \Magento\Framework\App\Action\HttpGetActionInterface
             $this->messageManager->addErrorMessage(__('Invalid request.'));
             $resultRedirect = $this->resultFactory->create(ResultFactory::TYPE_REDIRECT);
             $resultRedirect->setUrl(
-                $this->urlBuilder->getBaseUrl(),
-                ['_secure' => true]
+                $this->urlBuilder->getBaseUrl(['_secure' => true])
             );
             return $resultRedirect;
         }
 
-
-
         try {
             $record = $form->getRecordById($recordId);
         } catch (\Throwable $e) {
+            // Record not found
             $this->messageManager->addErrorMessage(__('Invalid request.'));
             $resultRedirect = $this->resultFactory->create(ResultFactory::TYPE_REDIRECT);
             $resultRedirect->setUrl(
-                $this->urlBuilder->getBaseUrl(),
-                ['_secure' => true]
+                $this->urlBuilder->getBaseUrl(['_secure' => true]),
             );
             return $resultRedirect;
         }
 
         $customerId = (int) $this->customerSession->getCustomerId();
 
-        // Record does not have proper customer_id
+        // Record does not have proper customer id
         if (!$customerId || (int) $record->getData('customer_id') !== $customerId) {
             $this->messageManager->addErrorMessage(__('Invalid request.'));
             $resultRedirect = $this->resultFactory->create(ResultFactory::TYPE_REDIRECT);
             $resultRedirect->setUrl(
-                $this->urlBuilder->getBaseUrl(),
-                ['_secure' => true]
+                $this->urlBuilder->getBaseUrl(['_secure' => true]),
             );
             return $resultRedirect;
         }
@@ -196,13 +190,10 @@ class Index implements \Magento\Framework\App\Action\HttpGetActionInterface
             $this->messageManager->addErrorMessage(__('Invalid request.'));
             $resultRedirect = $this->resultFactory->create(ResultFactory::TYPE_REDIRECT);
             $resultRedirect->setUrl(
-                $this->urlBuilder->getBaseUrl(),
-                ['_secure' => true]
+                $this->urlBuilder->getBaseUrl(['_secure' => true])
             );
             return $resultRedirect;
         }
-
-        $order = $orderItem = null;
 
         if (in_array('order_id', $requiredRecordParams) || in_array('order_item_id', $requiredRecordParams)) {
             $collection = $this->orderCollectionFactory->create();
@@ -217,19 +208,42 @@ class Index implements \Magento\Framework\App\Action\HttpGetActionInterface
                     ['o_item' => 'sales_order_item'],
                     'main_table.entity_id = o_item.order_id',
                     []
-                );
+                )->where('o_item.item_id = ' . $record->getData('order_item_id'));
             }
 
             if (!$collection->getSize()) {
+                // Request inconsistency (e.g. required order doesn't exist or doesn't belong to current customer)
                 $this->messageManager->addErrorMessage(__('Invalid request.'));
                 $resultRedirect = $this->resultFactory->create(ResultFactory::TYPE_REDIRECT);
                 $resultRedirect->setUrl(
-                    $this->urlBuilder->getBaseUrl(),
-                    ['_secure' => true]
+                    $this->urlBuilder->getBaseUrl(['_secure' => true])
                 );
                 return $resultRedirect;
+            } else {
+                /** @var \Magento\Sales\Model\Order $order */
+                $order = $collection->getFirstItem();
+
+                $allowedStatuses = $form->getData('allow_form_edit_for_order_statuses');
+                $status = $order->getStatus();
+
+                if (!in_array($status, $allowedStatuses)) {
+                    $this->messageManager->addErrorMessage(__('Edition of this form is no longer possible.'));
+                    $redirect = $this->urlBuilder->getBaseUrl(['_secure' => true]);
+
+                    if ($this->request->getParam('referrer')) {
+                        $candidate = base64_decode((string)$this->request->getParam('referrer'));
+                        if (filter_var($candidate, FILTER_VALIDATE_URL) && str_starts_with($candidate, $redirect)) {
+                            $redirect = $candidate;
+                        }
+                    }
+                    $resultRedirect = $this->resultFactory->create(ResultFactory::TYPE_REDIRECT);
+                    $resultRedirect->setUrl($redirect);
+                    return $resultRedirect;
+                }
             }
         }
+
+        // todo : rewrite load controller, it should require nothing more than formId and recordId on edit
 
         /** @var \Magento\Framework\View\Element\Template $container */
         $block = $this->layout->getBlock('alekseon_form');

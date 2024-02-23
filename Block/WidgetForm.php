@@ -341,7 +341,8 @@ class WidgetForm extends \Magento\Framework\View\Element\Template
         $data['message_templates'] = [
             'general_error' => __('Something went wrong.'),
             'expects_login' => __('This form requires the user to be logged in.'),
-            'expects_order' => __('This form must be associated with an order.')
+            'expects_order' => __('This form must be associated with an order.'),
+            'already_filled' => __('You have already submitted this form')
         ];
 
         $data['load_form_data_url'] = $this->_urlBuilder->getUrl(

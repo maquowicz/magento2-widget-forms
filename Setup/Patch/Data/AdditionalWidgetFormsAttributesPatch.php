@@ -86,6 +86,20 @@ class AdditionalWidgetFormsAttributesPatch implements DataPatchInterface, PatchR
         );
 
         $eavSetup->createOrUpdateAttribute(
+            'allow_multiple_submits',
+            [
+                'frontend_input' => 'boolean',
+                'frontend_label' => 'Allow Multiple Submits',
+                'visible_in_grid' => false,
+                'is_required' => false,
+                'sort_order' => 2,
+                'group_code' => 'widget_form_attribute',
+                'scope' => Scopes::SCOPE_GLOBAL,
+                'note' => 'Can user submit the same form with same parameters multiple times. It\'s highly recommended to set it to false. Doesn\'t concern forms which allow guest submits'
+            ]
+        );
+
+        $eavSetup->createOrUpdateAttribute(
             'required_record_params',
             [
                 'frontend_input' => 'multiselect',
@@ -94,7 +108,7 @@ class AdditionalWidgetFormsAttributesPatch implements DataPatchInterface, PatchR
                 'source_model' => 'Alekseon\WidgetForms\Model\Attribute\Source\Parameters',
                 'visible_in_grid' => false,
                 'is_required' => false,
-                'sort_order' => 2,
+                'sort_order' => 3,
                 'group_code' => 'widget_form_attribute',
                 'scope' => Scopes::SCOPE_GLOBAL,
                 'note' => 'Required params to be sent to form submit or load controller. Params like order_id or order_item_id presume that customer would be logged in'
@@ -110,7 +124,7 @@ class AdditionalWidgetFormsAttributesPatch implements DataPatchInterface, PatchR
                 'source_model' => 'Alekseon\WidgetForms\Model\Attribute\Source\OrderStatuses',
                 'visible_in_grid' => false,
                 'is_required' => false,
-                'sort_order' => 3,
+                'sort_order' => 4,
                 'group_code' => 'widget_form_attribute',
                 'scope' => Scopes::SCOPE_GLOBAL,
                 'note' => 'Order statuses for which form edition is allowed (taken into account for forms associated with orders)'

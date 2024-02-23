@@ -9,4 +9,9 @@
     <event name="alekseon_widget_form_after_submit">
         <observer name="Alekseon_WidgetForms::SubscribeToNewsletter" instance="Alekseon\WidgetForms\Observer\SubscribeToNewsletter" />
     </event>
+
+    <!-- DVCR - Clear customer session data -->
+    <event name="checkout_submit_all_after">
+        <observer name="alekseon_widget_forms_clear_session_after_order_submit" instance="Alekseon\WidgetForms\Observer\ClearSessionAfterOrderSubmit" />
+    </event>
 </config>

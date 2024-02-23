@@ -62,6 +62,7 @@ define([
                     }
                 });
             }).catch((reason) => {
+                this.disableFormControls();
                 this.printMessages();
             });
         },
@@ -101,17 +102,19 @@ define([
                     }
                     return data;
                 } else {
-                    if (data.require_login || data.missing_association) {
+                    if (data.require_login || data.missing_association || data.already_filled) {
                         if (data.require_login) {
                             this.addMessage('warning', wconf.message_templates['expects_login']);
                         }
                         if (data.missing_association) {
                             this.addMessage('warning', wconf.message_templates['expects_order']);
                         }
+                        if (data.already_filled) {
+                            this.addMessage('warning', wconf.message_templates['already_filled']);
+                        }
                     } else {
                         this.addMessage('error', wconf.message_templates['general_error']);
                     }
-                    this.disableFormControls();
                     return Promise.reject();
                 }
 

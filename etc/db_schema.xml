@@ -34,12 +34,6 @@
         <constraint xsi:type="foreign" referenceId="ALEKSEON_CUSTOM_FORM_RECORD_FK_ORDER_ITEM_ID" table="alekseon_custom_form_record"
                     column="order_item_id" referenceTable="sales_order_item" referenceColumn="item_id" onDelete="CASCADE"/>
 
-        <constraint xsi:type="unique" referenceId="ALEKSEON_CUSTOM_FORM_RECORD_UNIQUE_FORM_ID_ORDER_ITEM_ID">
-            <column name="form_id"/>
-            <column name="order_item_id"/>
-        </constraint>
-
-
         <index referenceId="ALEKSEON_CUSTOM_FORM_RECORD_IDX_CUSTOMER_ID" indexType="btree">
             <column name="customer_id"/>
         </index>
