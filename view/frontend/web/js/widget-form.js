@@ -61,6 +61,8 @@ define([
                             break;
                     }
                 });
+
+                this.hideOverlay();
             }).catch((reason) => {
                 this.disableFormControls();
                 this.printMessages();
@@ -127,6 +129,16 @@ define([
                 elem.disabled = true;
             });
             return this;
+        },
+
+        showOverlay : function () {
+            let overlay = this.options.form.parentElement.querySelector('[data-role="form-overlay"]');
+            overlay.style.display = 'block';
+        },
+
+        hideOverlay : function () {
+            let overlay = this.options.form.parentElement.querySelector('[data-role="form-overlay"]');
+            overlay.style.display = 'none';
         },
 
         fillFromData : function (data) {

@@ -18,4 +18,12 @@
                 disabled="false"
         />
     </type>
+
+    <type name="Alekseon\CustomFormsEmailNotification\Model\Email\AbstractSender">
+        <plugin name="Alekseon_WidgetForms::EmailSenderAdditionalTemplateVars"
+                type="Alekseon\WidgetForms\Plugin\EmailSenderAdditionalTemplateVars"
+                sortOrder="100"
+                disabled="false"
+        />
+    </type>
 </config>

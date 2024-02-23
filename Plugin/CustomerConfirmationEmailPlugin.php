@@ -13,15 +13,12 @@ namespace Alekseon\WidgetForms\Plugin;
  */
 class CustomerConfirmationEmailPlugin
 {
-    protected $customerRepository;
-
     /** @var \Alekseon\CustomFormsBuilder\Model\FormRecord $formRecord */
     protected $formRecord = null;
 
     public function __construct(
-        \Magento\Customer\Api\CustomerRepositoryInterface $customerRepository
     ) {
-        $this->customerRepository = $customerRepository;
+
     }
 
     public function afterGetReceiverEmails (

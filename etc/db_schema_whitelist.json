@@ -1,0 +1,21 @@
+{
+    "alekseon_custom_form_record": {
+        "column": {
+            "customer_id": true,
+            "customer_email": true,
+            "order_id": true,
+            "order_item_id": true
+        },
+        "index": {
+            "ALEKSEON_CUSTOM_FORM_RECORD_CUSTOMER_ID": true,
+            "ALEKSEON_CUSTOM_FORM_RECORD_ORDER_ID": true
+        },
+        "constraint": {
+            "ALEKSEON_CUSTOM_FORM_RECORD_CSTR_ID_CSTR_ENTT_ENTT_ID": true,
+            "ALEKSEON_CUSTOM_FORM_RECORD_CUSTOMER_EMAIL_CUSTOMER_ENTITY_EMAIL": true,
+            "ALEKSEON_CUSTOM_FORM_RECORD_ORDER_ID_SALES_ORDER_ENTITY_ID": true,
+            "FK_EF31DCA6FD306CE6A1DA8C6B3919AEAB": true,
+            "ALEKSEON_CUSTOM_FORM_RECORD_FORM_ID_ORDER_ITEM_ID": true
+        }
+    }
+}

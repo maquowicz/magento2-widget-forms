@@ -110,6 +110,8 @@ class Submit implements HttpPostActionInterface
     {
         $resultJson = $this->jsonFactory->create();
 
+        // todo : refactor this mess
+
         try {
             $form = $this->getForm();
             $this->validateData();
@@ -125,7 +127,7 @@ class Submit implements HttpPostActionInterface
             $isLoggedIn = $this->customerSession->isLoggedIn();
 
             if (('edit' === $formMode || false === $allowGuestSubmit) && !$isLoggedIn) {
-                throw new LocalizedException(__('Please log in'));
+                throw new LocalizedException(__('You were logged out. Please log in.'));
             }
 
             $recordId = null;
@@ -145,7 +147,7 @@ class Submit implements HttpPostActionInterface
 
             if ($requiredParams && (in_array('order_id', $requiredParams) || in_array('order_item_id', $requiredParams))) {
                 if (!$isLoggedIn) {
-                    throw new LocalizedException(__('Please log in'));
+                    throw new LocalizedException(__('You were logged out. Please log in.'));
                 }
             }
 
@@ -217,6 +219,14 @@ class Submit implements HttpPostActionInterface
             $formRecord = null;
 
             if ('edit' === $formMode) {
+                if ($order) {
+                    $allowedStatuses = $form->getData('allow_form_edit_for_order_statuses');
+                    $allowedStatuses = is_array($allowedStatuses) ? $allowedStatuses : [];
+
+                    if (!in_array($order->getStatus(), $allowedStatuses)) {
+                        throw new LocalizedException(__('Edition of this form is no longer possible.'));
+                    }
+                }
                 $formRecordCollection = $this->formRecordCollectionFactory->create();
                 $formRecordCollection
                     ->addFieldToFilter('entity_id', ['eq' => $recordId])
@@ -241,6 +251,32 @@ class Submit implements HttpPostActionInterface
                 $formRecord->setFormId($form->getId());
                 $formRecord->getResource()->load($formRecord, $formRecord->getId());
             } else {
+
+                // Condition hint: guest submit gets invalidate by order_id/order_item_id requirement
+                if (!$form->getData('allow_multiple_submits') && (!$form->getData('allow_guest_submit') ||
+                    in_array('order_id', $requiredParams) || in_array('order_item_id', $requiredParams))) {
+
+                    $formRecordCollection = $this->formRecordCollectionFactory->create();
+
+                    $formRecordCollection->addFieldToFilter('form_id', $form->getId());
+                    $formRecordCollection->addFieldToFilter(
+                        'customer_id', ['eq' => $this->customerSession->getCustomerId()]
+                    );
+
+                    if ($additional['order_id']) {
+                        $formRecordCollection->addFieldToFilter('order_id', ['eq' => $additional['order_id']]);
+                    }
+                    if ($additional['order_item_id']) {
+                        $formRecordCollection->addFieldToFilter('order_item_id', ['eq' => $additional['order_item_id']]);
+                    }
+
+                    if ($formRecordCollection->getSize()) {
+                        throw new LocalizedException(__('You have already submitted this form.'));
+                    }
+
+
+                }
+
                 $formRecord = $this->formRecordFactory->create();
                 $formRecord->setData('customer_id', $this->customerSession->getCustomerId());
                 $formRecord->setData('customer_email', $this->customerSession->getCustomer()->getEmail());
@@ -361,7 +397,7 @@ class Submit implements HttpPostActionInterface
     public function validateData()
     {
         if (!$this->formKeyValidator->validate($this->getRequest())) {
-            throw new LocalizedException(__('Invalid Form Key. Please refresh the page.'));
+            throw new LocalizedException(__('Your session has probably expired. Please refresh the page.'));
         }
 
         if ($this->getRequest()->getParam('hideit')) {
@@ -369,7 +405,7 @@ class Submit implements HttpPostActionInterface
         }
 
         if (!$this->getRequest()->getParam('form_mode') || !in_array($this->getRequest()->getParam('form_mode'), ['new', 'edit'])) {
-            throw new LocalizedException(__('Mode not specified.'));
+            throw new LocalizedException(__('Unknown form mode.'));
         }
     }
 
