@@ -36,7 +36,7 @@ class Index extends \Magento\Customer\Controller\AbstractAccount implements Acco
     public function execute()
     {
         $resultPage = $this->_pageFactory->create();
-        $resultPage->getConfig()->getTitle()->set(__('Form Records List'));
+        $resultPage->getConfig()->getTitle()->set(__('Completed Forms List'));
         return $resultPage;
     }
 }

@@ -3,27 +3,25 @@
 
     /** @var \Alekseon\WidgetForms\Helper\Data $dataHelper */
     $dataHelper = $block->getData('data_helper');
-    $_items = $dataHelper->getCustomerRecords();
+    $_items = $dataHelper->getCustomerRecords(true);
 ?>
 
 <?php if (count($_items)) : ?>
     <table>
         <thead>
             <tr>
-                <th>#</th>
-                <th>Title</th>
-                <th>Order ID</th>
-                <th>Item</th>
-                <th>Action</th>
+                <th><?= __('Order'); ?></th>
+                <th><?= __('Form Type'); ?></th>
+                <th><?= __('Product'); ?></th>
+                <th><?= __('Actions'); ?></th>
             </tr>
         </thead>
     <?php $i = 1; ?>
     <?php foreach($_items as $item) : ?>
         <tr>
-            <td><?= $i . '.' ?></td>
+            <td><?= $item['order_increment_id'] ? ('#' . $item['order_increment_id']) : '----' ?></td>
             <td style="font-weight: bold; color: #0f5293;"><?= $item['form_title'] ?></td>
-            <td><?= null !== $item['order_id'] ? $item['order_id'] : '----' ?></td>
-            <td><?= null !== $item['order_item_id'] ? $item['order_item_id'] : '----' ?></td>
+            <td><?= $item['product_name'] ? $item['product_name'] : '----' ?></td>
             <td>
                 <a href="<?= $dataHelper->getEditUrl($item); ?>">Edit</a>
             </td>
@@ -32,5 +30,5 @@
     <?php endforeach; ?>
     </table>
 <?php else : ?>
-    No records found
+    <?= __('No records found'); ?>
 <?php endif; ?>

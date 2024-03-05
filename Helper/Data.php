@@ -82,7 +82,7 @@ class Data extends AbstractHelper implements ArgumentInterface
     }
 
 
-    public function getCustomerRecords () {
+    public function getCustomerRecords ($additional = false) {
         $result = [];
         if ($this->customerSession->isLoggedIn() && is_numeric($this->customerSession->getCustomerId())) {
             $collection = $this->formRecordCollectionFactory->create();
@@ -92,6 +92,21 @@ class Data extends AbstractHelper implements ArgumentInterface
             $forms = [];
 
             if ($collection->getSize()) {
+
+                if ($additional) {
+                    $collection->getSelect()->joinLeft(
+                        ['ord' => 'sales_order'],
+                        'main_table.order_id = ord.entity_id AND main_table.customer_id = ord.customer_id',
+                        ['order_increment_id' => 'increment_id']
+                    );
+
+                    $collection->getSelect()->joinLeft(
+                        ['itm' => 'sales_order_item'],
+                        'main_table.order_item_id = itm.item_id AND ord.entity_id = itm.order_id',
+                        ['product_name' => 'name']
+                    );
+                }
+
                 /** @var \Alekseon\CustomFormsBuilder\Model\FormRecord $item */
                 foreach ($collection as $item) {
                     $formId = $item->getData('form_id');
