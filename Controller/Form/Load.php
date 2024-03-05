@@ -206,7 +206,6 @@ class Load implements \Magento\Framework\App\Action\HttpPostActionInterface
             if ('new' === $formMode) {
 
                 $allowMultipleSubmits = (bool) $form->getData('allow_multiple_submits');
-                $allowMultipleSubmits = true;
 
                 if (!$allowMultipleSubmits && !$form->getData('allow_guest_submit')) {
                     $recordCollection = $this->formRecordCollectionFactory->create();

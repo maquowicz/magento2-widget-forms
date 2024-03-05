@@ -253,7 +253,7 @@ class Submit implements HttpPostActionInterface
             } else {
 
                 // Condition hint: guest submit gets invalidate by order_id/order_item_id requirement
-                if (false && !$form->getData('allow_multiple_submits') && (!$form->getData('allow_guest_submit') ||
+                if (!$form->getData('allow_multiple_submits') && (!$form->getData('allow_guest_submit') ||
                     in_array('order_id', $requiredParams) || in_array('order_item_id', $requiredParams))) {
 
                     $formRecordCollection = $this->formRecordCollectionFactory->create();
