@@ -49,7 +49,9 @@ class EmailSenderAdditionalTemplateVars
                     );
 
                     if ($collection->getSize()) {
+                        /** @var \Magento\Customer\Model\Customer $customerModel */
                         $customerModel = $collection->getFirstItem();
+                        $customerModel->setData('name', $customerModel->getName());
                         $result['customer'] = $customerModel;
                     }
                 } catch (\Throwable $e) {}
