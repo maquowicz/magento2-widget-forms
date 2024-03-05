@@ -11,6 +11,7 @@
 ?>
 <fieldset
     class="fieldset"
+    data-role="form-tab"
     id="form-tab-fieldset-<?= $escaper->escapeHtmlAttr($block->getTab()->getTabSequenceNumber()) ?>"
     <?php if (!$block->getTab()->getIsFirstTab()): ?>style="display: none"<?php endif ?>
 >
@@ -23,6 +24,7 @@
     <?= $block->getChildHtml() ?>
 </fieldset>
 <div class="actions-toolbar"
+     data-role="form-tab-actions"
      id="form-tab-actions-<?= $escaper->escapeHtmlAttr($block->getTab()->getTabSequenceNumber()) ?>"
     <?= $block->getTab()->getIsFirstTab() ? '' : ' style="display: none;"' ?>>
     <div class="form-tab-actions-inner">

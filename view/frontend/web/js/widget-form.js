@@ -65,6 +65,7 @@ define([
                 this.hideOverlay();
             }).catch((reason) => {
                 this.disableFormControls();
+            }).finally(() => {
                 this.printMessages();
             });
         },
@@ -435,6 +436,15 @@ define([
             }, "100");
         },
 
+        closeTabs : function (form) {
+            $(this.options.form).find('[data-role="form-tab"]').each((index) => {
+                $(this).slideUp();
+            });
+            $(this.options.form).find('[data-role="form-tab-actions"]').each((index) => {
+                $(this).hide();
+            });
+        },
+
         submitFormAction: function () {
             if ($(this.options.form).validation && !$(this.options.form).validation('isValid')) {
                 return false;
@@ -459,6 +469,8 @@ define([
                 formData.append('referrer', params.referrer);
             }
 
+            this.showOverlay();
+
             $.ajax({
                 url: this.options.formSubmitUrl,
                 type: 'POST',
@@ -475,12 +487,13 @@ define([
                 }
             }).fail(function (error) {
                 self.onError(error.responseJSON);
-            }).complete(function() {
+            }).always(function() {
                 self.onComplete();
             });
         },
 
         onComplete: function() {
+            this.closeTabs(this.options.form);
         },
 
         onError: function(response) {
