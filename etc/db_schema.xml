@@ -24,12 +24,13 @@
         <constraint xsi:type="foreign" referenceId="ALEKSEON_CUSTOM_FORM_RECORD_FK_CUSTOMER_ID" table="alekseon_custom_form_record"
                     column="customer_id" referenceTable="customer_entity" referenceColumn="entity_id" onDelete="CASCADE"/>
 
+        <!-- Disabling - prevents email change - todo: use trigger for update -->
         <constraint xsi:type="foreign" referenceId="ALEKSEON_CUSTOM_FORM_RECORD_FK_CUSTOMER_EMAIL" table="alekseon_custom_form_record"
-                    column="customer_email" referenceTable="customer_entity" referenceColumn="email" onDelete="CASCADE"/>
+                    column="customer_email" referenceTable="customer_entity" referenceColumn="email" onDelete="CASCADE" disabled="true"/>
 
 
         <constraint xsi:type="foreign" referenceId="ALEKSEON_CUSTOM_FORM_RECORD_FK_ORDER_ID" table="alekseon_custom_form_record"
-                    column="order_id" referenceTable="sales_order" referenceColumn="entity_id" onDelete="CASCADE"/>
+                    column="order_id" referenceTable="sales_order" referenceColumn="entity_id" onDelete="CASCADE" />
 
         <constraint xsi:type="foreign" referenceId="ALEKSEON_CUSTOM_FORM_RECORD_FK_ORDER_ITEM_ID" table="alekseon_custom_form_record"
                     column="order_item_id" referenceTable="sales_order_item" referenceColumn="item_id" onDelete="CASCADE"/>
